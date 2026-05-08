@@ -1,0 +1,111 @@
+providers:
+  - name: wa_food_farm_finder
+    enabled: true
+    display_name: WA Food & Farm Finder
+    base_url: https://eatlocalfirst.org/wa-food-farm-finder/
+    region: washington
+    source_type: state_farm_directory
+    refresh_interval_hours: 168
+    crawl_delay_seconds: 2
+    max_pages: 1000
+    max_retries: 3
+    timeout_seconds: 25
+    rate_limit_per_minute: 30
+    allowed_domains:
+      - eatlocalfirst.org
+    blocked_domains:
+      - facebook.com
+      - fb.com
+      - instagram.com
+      - tiktok.com
+      - linkedin.com
+      - x.com
+      - twitter.com
+      - youtube.com
+    pagination:
+      mode: discover_links
+      next_selectors:
+        - a.next
+        - a[rel="next"]
+        - .pagination a
+    validation:
+      require_online_ordering: true
+      min_confidence_score: 50
+      qualified_types:
+        - ecommerce_store
+        - csa_signup
+        - subscription_box
+        - farm_platform_store
+      ordering_indicators:
+        - add to cart
+        - checkout
+        - subscribe
+        - csa signup
+        - order online
+        - buy now
+        - delivery available
+        - weekly box
+        - pickup available
+
+  - name: localharvest
+    enabled: false
+    display_name: LocalHarvest
+    base_url: https://www.localharvest.org/
+    region: national
+    source_type: csa_directory
+    refresh_interval_hours: 168
+    crawl_delay_seconds: 3
+    max_pages: 100
+    max_retries: 3
+    timeout_seconds: 25
+    rate_limit_per_minute: 20
+    allowed_domains:
+      - localharvest.org
+    blocked_domains: []
+    pagination:
+      mode: provider_defined
+    validation:
+      require_online_ordering: true
+      min_confidence_score: 50
+
+  - name: marketwagon
+    enabled: false
+    display_name: Market Wagon
+    base_url: https://marketwagon.com/
+    region: national
+    source_type: producer_marketplace
+    refresh_interval_hours: 168
+    crawl_delay_seconds: 3
+    max_pages: 100
+    max_retries: 3
+    timeout_seconds: 25
+    rate_limit_per_minute: 20
+    allowed_domains:
+      - marketwagon.com
+    blocked_domains: []
+    pagination:
+      mode: provider_defined
+    validation:
+      require_online_ordering: true
+      min_confidence_score: 50
+
+  - name: grownby
+    enabled: false
+    display_name: GrownBy
+    base_url: https://grownby.app/
+    region: national
+    source_type: farm_platform_store
+    refresh_interval_hours: 168
+    crawl_delay_seconds: 3
+    max_pages: 100
+    max_retries: 3
+    timeout_seconds: 25
+    rate_limit_per_minute: 20
+    allowed_domains:
+      - grownby.app
+    blocked_domains: []
+    pagination:
+      mode: provider_defined
+    validation:
+      require_online_ordering: true
+      min_confidence_score: 50

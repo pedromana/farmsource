@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FarmSource Sources</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Source Management</h1>
+        <p>Enable, tune, test, and rescan provider modules.</p>
+      </div>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/admin">Sources</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="actions">
+        <form method="post" action="/admin/providers/sync"><button>Sync providers.yaml</button></form>
+        <form method="post" action="/admin/rescan"><button>Run enabled providers</button></form>
+      </section>
+
+      <section class="provider-grid">
+        {% for provider in providers %}
+        <article class="provider">
+          <div class="provider-title">
+            <h2>{{ provider.display_name or provider.name }}</h2>
+            <span class="badge {{ 'ok' if provider.enabled else 'off' }}">{{ 'enabled' if provider.enabled else 'disabled' }}</span>
+          </div>
+          <p>{{ provider.base_url }}</p>
+          <p class="muted">Region: {{ provider.region or 'unknown' }} | Type: {{ provider.source_type or 'unknown' }}</p>
+          <form class="provider-form" method="post" action="/admin/providers/{{ provider.name }}/update">
+            <label>Base URL <input name="base_url" value="{{ provider.base_url }}"></label>
+            <label>Crawl delay <input type="number" step="0.5" name="crawl_delay_seconds" value="{{ provider.crawl_delay_seconds }}"></label>
+            <label>Max pages <input type="number" name="max_pages" value="{{ provider.max_pages or 100 }}"></label>
+            <label>Rate/min <input type="number" name="rate_limit_per_minute" value="{{ provider.rate_limit_per_minute or 20 }}"></label>
+            <button>Save settings</button>
+          </form>
+          <div class="actions">
+            <form method="post" action="/admin/providers/{{ provider.name }}/toggle"><button>{{ 'Disable' if provider.enabled else 'Enable' }}</button></form>
+            <form method="post" action="/admin/providers/{{ provider.name }}/test"><button>Test</button></form>
+            <form method="post" action="/admin/providers/{{ provider.name }}/rescan"><button>Rescan</button></form>
+          </div>
+          <p class="muted">Health: {{ provider.last_health_status or 'not tested' }}</p>
+          {% if provider.last_error %}<p class="error">{{ provider.last_error }}</p>{% endif %}
+        </article>
+        {% endfor %}
+      </section>
+
+      <section class="table-shell">
+        <h2>Recent Runs</h2>
+        <table>
+          <thead><tr><th>Provider</th><th>Status</th><th>Seen</th><th>Saved</th><th>Qualified</th><th>Message</th></tr></thead>
+          <tbody>
+            {% for run in runs %}
+            <tr><td>{{ run.provider_name }}</td><td>{{ run.status }}</td><td>{{ run.listings_seen }}</td><td>{{ run.producers_saved }}</td><td>{{ run.qualified_saved }}</td><td>{{ run.message or '' }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="table-shell">
+        <h2>Recent Errors</h2>
+        <table>
+          <thead><tr><th>Provider</th><th>Type</th><th>URL</th><th>Message</th></tr></thead>
+          <tbody>
+            {% for error in errors %}
+            <tr><td>{{ error.provider_name }}</td><td>{{ error.error_type }}</td><td>{{ error.url or '' }}</td><td>{{ error.message }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>
