@@ -199,7 +199,7 @@ async def save_delivery_window(request: Request, db: Annotated[Session, Depends(
 
 @router.get("/routes")
 def list_routes(request: Request, db: Annotated[Session, Depends(get_db)]):
-    routes = db.scalars(select(Route).order_by(Route.created_at.desc())).all()
+    routes = db.scalars(select(Route).order_by(Route.reassignment_priority.desc(), Route.created_at.desc())).all()
     drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name, Driver.first_name)).all()
     suggestions = route_driver_suggestions(db, routes)
     return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "drivers": drivers, "suggestions": suggestions, "route_progress": route_progress})
@@ -258,6 +258,8 @@ async def save_route(request: Request, db: Annotated[Session, Depends(get_db)], 
     route.estimated_order_count = _int(form.get("estimated_order_count"), route.estimated_order_count or 0)
     route.route_pay = _float(form.get("route_pay"), 0.0)
     route.route_bonus = _float(form.get("route_bonus"), 0.0)
+    route.reassignment_priority = form.get("reassignment_priority") == "on"
+    route.assignment_notes = _optional(form.get("assignment_notes"))
     route.route_notes = _optional(form.get("route_notes"))
     route.notes = _optional(form.get("notes"))
     db.add(route)
@@ -299,6 +301,16 @@ async def assign_driver_manually(route_id: int, request: Request, db: Annotated[
         raise HTTPException(status_code=404, detail="Route not found")
     form = await request.form()
     assign_route_to_driver(db, route, _optional_int(form.get("driver_id")))
+    db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
+
+
+@router.post("/routes/{route_id}/unassign-driver")
+def unassign_route_driver(route_id: int, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    assign_route_to_driver(db, route, None)
     db.commit()
     return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
 

@@ -12,6 +12,12 @@
     <p>{{ route.route_notes or route.notes or "" }}</p>
     <p>Pay estimate: ${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}</p>
   </article>
+  <form class="driver-card driver-form" method="post" action="/driver/route/{{ route.id }}/decline">
+    <h2>Decline route</h2>
+    <p>This will remove the route from your assigned route list and send it back to admin as priority for reassignment.</p>
+    <label>Reason optional<textarea name="decline_reason"></textarea></label>
+    <button>Decline route</button>
+  </form>
   <div class="driver-stop-list">
     {% for stop in route.stops %}
       <a class="driver-stop {{ stop.stop_status }}" href="/driver/stop/{{ stop.id }}">

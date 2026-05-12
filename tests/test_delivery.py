@@ -49,6 +49,68 @@ def test_admin_route_suggestion_can_be_accepted() -> None:
         assert route.driver_id == driver.id
 
 
+def test_admin_can_unassign_route_from_driver() -> None:
+    with TestClient(app) as client:
+        login_admin(client)
+        client.post("/admin/routes/suggestions/accept-all", follow_redirects=False)
+        with SessionLocal() as db:
+            route = db.query(Route).filter(Route.route_name == "Seattle Pilot Route").first()
+            assert route is not None
+            route_id = route.id
+
+        response = client.post(f"/admin/routes/{route_id}/unassign-driver", follow_redirects=False)
+        assert response.status_code == 303
+
+    with SessionLocal() as db:
+        route = db.get(Route, route_id)
+        driver = db.query(Driver).filter(Driver.email == "driver@example.com").first()
+        assert route is not None
+        assert driver is not None
+        assert route.driver_id is None
+        assert route.route_status == "planned"
+        route.driver_id = driver.id
+        route.route_status = "assigned"
+        route.reassignment_priority = False
+        db.commit()
+
+
+def test_driver_can_decline_route_and_route_becomes_priority() -> None:
+    with TestClient(app) as client:
+        login_admin(client)
+        client.post("/admin/routes/suggestions/accept-all", follow_redirects=False)
+        login_driver(client)
+
+        with SessionLocal() as db:
+            route = db.query(Route).filter(Route.route_name == "Seattle Pilot Route").first()
+            assert route is not None
+            route_id = route.id
+
+        decline_response = client.post(
+            f"/driver/route/{route_id}/decline",
+            data={"decline_reason": "Schedule conflict"},
+            follow_redirects=False,
+        )
+        assert decline_response.status_code == 303
+
+        routes_response = client.get("/driver/routes")
+        assert routes_response.status_code == 200
+        assert "Seattle Pilot Route" not in routes_response.text
+
+    with SessionLocal() as db:
+        route = db.get(Route, route_id)
+        driver = db.query(Driver).filter(Driver.email == "driver@example.com").first()
+        assert route is not None
+        assert driver is not None
+        assert route.driver_id is None
+        assert route.reassignment_priority is True
+        assert "Declined by" in (route.assignment_notes or "")
+        route.driver_id = driver.id
+        route.route_status = "assigned"
+        route.reassignment_priority = False
+        route.assignment_notes = None
+        db.commit()
+
+
 def test_driver_route_workflow_loads_and_updates_stop() -> None:
     with TestClient(app) as client:
         bad_login = client.post("/driver/login", data={"email": "driver@example.com", "password": "wrong"})

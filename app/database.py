@@ -80,6 +80,8 @@ def _migrate_legacy_sqlite_schema() -> None:
             route_additions = {
                 "estimated_stop_count": "INTEGER NOT NULL DEFAULT 0",
                 "estimated_order_count": "INTEGER NOT NULL DEFAULT 0",
+                "reassignment_priority": "BOOLEAN NOT NULL DEFAULT 0",
+                "assignment_notes": "TEXT",
                 "route_notes": "TEXT",
             }
             for column_name, ddl in route_additions.items():

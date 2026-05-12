@@ -10,7 +10,7 @@ from app.config import BASE_DIR
 from app.database import get_db
 from app.models import Driver, Route, RouteStop
 from app.services.auth import authenticate_driver
-from app.services.delivery import assigned_driver_routes, order_summary, route_progress, update_stop_status
+from app.services.delivery import assigned_driver_routes, decline_route_by_driver, order_summary, route_progress, update_stop_status
 
 
 router = APIRouter(prefix="/driver", tags=["driver"])
@@ -114,6 +114,17 @@ async def update_driver_stop(stop_id: int, request: Request, db: Annotated[Sessi
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RedirectResponse(f"/driver/route/{stop.route_id}", status_code=303)
+
+
+@router.post("/route/{route_id}/decline")
+async def decline_driver_route(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    driver = _require_driver(request, db)
+    route = db.get(Route, route_id)
+    if not route or route.driver_id != driver.id:
+        raise HTTPException(status_code=404, detail="Route not found")
+    form = await request.form()
+    decline_route_by_driver(db, route, driver, _optional(form.get("decline_reason")))
+    return RedirectResponse("/driver/routes", status_code=303)
 
 
 def _optional(value) -> str | None:

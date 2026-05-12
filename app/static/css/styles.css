@@ -677,6 +677,23 @@ td span {
   padding: 0.2rem 0.55rem;
 }
 
+.priority-pill {
+  background: #fff0d6;
+  border: 1px solid #e5b45f;
+  border-radius: 999px;
+  color: #7a4a00;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  text-transform: uppercase;
+}
+
+.priority-row {
+  background: #fffaf0;
+}
+
 .route-stop-row {
   align-items: center;
   display: grid;

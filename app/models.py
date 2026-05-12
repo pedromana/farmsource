@@ -333,6 +333,8 @@ class Route(Base, TimestampMixin):
     estimated_order_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     route_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     route_bonus: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    reassignment_priority: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    assignment_notes: Mapped[str | None] = mapped_column(Text)
     route_notes: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 

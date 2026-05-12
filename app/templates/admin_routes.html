@@ -28,8 +28,8 @@
         {% set progress = route_progress(route) %}
         {% set suggestion = suggestions.get(route.id) %}
         {% set best = suggestion.best if suggestion else None %}
-        <tr>
-          <td><strong>{{ route.route_name }}</strong><br><span>{{ route.region or "" }}</span></td>
+        <tr class="{% if route.reassignment_priority %}priority-row{% endif %}">
+          <td><strong>{{ route.route_name }}</strong>{% if route.reassignment_priority %} <span class="priority-pill">Priority</span>{% endif %}<br><span>{{ route.region or "" }}</span></td>
           <td>{{ route.delivery_window.name if route.delivery_window else "No window" }}</td>
           <td>
             <form class="inline-assign-form" method="post" action="/admin/routes/{{ route.id }}/assign-driver">
@@ -40,6 +40,7 @@
                 {% endfor %}
               </select>
               <button>Assign</button>
+              {% if route.driver_id %}<button name="driver_id" value="">Unassign</button>{% endif %}
             </form>
           </td>
           <td>

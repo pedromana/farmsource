@@ -104,6 +104,7 @@ def assigned_driver_routes(db: Session, driver_id: int) -> list[Route]:
     return db.scalars(
         select(Route)
         .where(Route.driver_id == driver_id)
+        .where(Route.route_status.notin_(["completed", "cancelled"]))
         .order_by(Route.created_at.desc())
     ).all()
 
@@ -113,7 +114,7 @@ def route_driver_suggestions(db: Session, routes: list[Route] | None = None) -> 
         routes = db.scalars(
             select(Route)
             .where(Route.route_status.in_(["planned", "assigned"]))
-            .order_by(Route.created_at.desc())
+            .order_by(Route.reassignment_priority.desc(), Route.created_at.desc())
         ).all()
     drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name, Driver.first_name)).all()
     active_counts = dict(
@@ -142,6 +143,9 @@ def route_driver_suggestions(db: Session, routes: list[Route] | None = None) -> 
 def score_driver_for_route(driver: Driver, route: Route, active_route_count: int) -> dict:
     score = 50
     reasons = []
+    if route.reassignment_priority:
+        score += 10
+        reasons.append("priority reassignment")
     driver_territory = (driver.territory or "").strip().lower()
     route_region = (route.region or "").strip().lower()
     if driver_territory and route_region and driver_territory == route_region:
@@ -171,6 +175,24 @@ def score_driver_for_route(driver: Driver, route: Route, active_route_count: int
 
 def assign_route_to_driver(db: Session, route: Route, driver_id: int | None) -> None:
     route.driver_id = driver_id
+    if driver_id:
+        route.reassignment_priority = False
     if driver_id and route.route_status == "planned":
         route.route_status = "assigned"
+    elif not driver_id and route.route_status in {"assigned", "in_progress"}:
+        route.route_status = "planned"
     ensure_route_payout(db, route)
+
+
+def decline_route_by_driver(db: Session, route: Route, driver: Driver, reason: str | None = None) -> None:
+    driver_name = f"{driver.first_name} {driver.last_name}".strip()
+    note = f"Declined by {driver_name}"
+    if reason:
+        note = f"{note}: {reason.strip()}"
+    existing_notes = route.assignment_notes.strip() if route.assignment_notes else ""
+    route.assignment_notes = f"{existing_notes}\n{note}".strip() if existing_notes else note
+    route.driver_id = None
+    route.route_status = "planned"
+    route.reassignment_priority = True
+    ensure_route_payout(db, route)
+    db.commit()

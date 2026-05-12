@@ -25,9 +25,19 @@
     <label>Estimated orders<input name="estimated_order_count" type="number" value="{{ route.estimated_order_count }}"></label>
     <label>Base route pay<input name="route_pay" type="number" step="0.01" value="{{ route.route_pay }}"></label>
     <label>Bonus<input name="route_bonus" type="number" step="0.01" value="{{ route.route_bonus }}"></label>
+    <label class="check-row"><input name="reassignment_priority" type="checkbox" {% if route.reassignment_priority %}checked{% endif %}> Priority reassignment</label>
+    <label class="full">Assignment notes<textarea name="assignment_notes">{{ route.assignment_notes or '' }}</textarea></label>
     <label class="full">Route notes<textarea name="route_notes">{{ route.route_notes or route.notes or '' }}</textarea></label>
     <div class="actions full"><button class="primary">Save route</button><a class="button" href="/admin/routes">Back to routes</a></div>
   </form>
+  {% if route.driver_id %}
+    <form class="panel" method="post" action="/admin/routes/{{ route.id }}/unassign-driver">
+      <div class="row-heading">
+        <div><h2>Unassign driver</h2><p>Remove this route from the current driver's app and return it to the unassigned route list.</p></div>
+        <button>Unassign route</button>
+      </div>
+    </form>
+  {% endif %}
   <section class="dashboard-grid">
     <article><h2>Driver</h2><p>{{ route.driver.first_name ~ " " ~ route.driver.last_name if route.driver else "Unassigned" }}<br>{{ route.driver.phone if route.driver else "" }}</p></article>
     <article><h2>Delivery window</h2><p>{{ route.delivery_window.name if route.delivery_window else "No window" }}<br>{{ route.estimated_start_time or "" }} - {{ route.estimated_end_time or "" }}</p></article>

@@ -386,9 +386,11 @@ Admin route tools:
 Route assignment options:
 
 - Manually choose a driver from the route list or route detail page.
+- Unassign a route from a driver and return it to the unassigned route list.
 - Review suggested drivers scored by territory/region match and current active route load.
 - Accept one suggested driver for a route.
 - Accept all current route-driver suggestions from the route list.
+- Review priority reassignment routes first when a driver declines a route.
 
 Suggestions are deliberately advisory. They do not perform live dispatching, GPS matching, or route optimization.
 
@@ -413,6 +415,8 @@ Driver123!
 Drivers can view assigned routes, route progress, stops in sequence, delivery instructions, customer phone placeholder, ordered item summaries, and route payout estimate. On each stop, the driver can mark delivered, failed, skipped, add driver notes, add a failed reason, and store a proof-of-delivery URL placeholder.
 
 Driver login is password protected. Admins can set or reset driver passwords from `/admin/drivers`; leaving the password field blank keeps the existing password.
+
+Drivers can decline an assigned route from the route detail screen. Declining removes the route from that driver's app, clears the route assignment, returns the route to `planned`, marks it as priority for reassignment, and records the decline note for admin review.
 
 When a stop is marked delivered, the stop status changes to `delivered`, the order status changes to `delivered`, and `delivered_at` is recorded. When all stops are completed as delivered, failed, or skipped, the route becomes `completed`.
 
