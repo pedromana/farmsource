@@ -68,3 +68,8 @@ def test_driver_route_workflow_loads_and_updates_stop() -> None:
         assert stop is not None
         assert stop.stop_status == "delivered"
         assert stop.order.order_status == "delivered"
+        stop.stop_status = "pending"
+        stop.driver_notes = None
+        stop.delivered_at = None
+        stop.order.order_status = "assigned_to_route"
+        db.commit()
