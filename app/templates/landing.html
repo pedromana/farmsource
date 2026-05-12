@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Farmsource | Seattle Produce Delivery{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Seattle pilot</p>
+    <h1>Local farm-to-consumer produce, scheduled by delivery route.</h1>
+    <p>
+      Farmsource connects customers with regional producers through planned
+      delivery windows instead of instant dispatch.
+    </p>
+    <div class="actions">
+      <a class="button primary" href="/customer">Browse market</a>
+      <a class="button" href="/admin">Open admin</a>
+    </div>
+  </div>
+</section>
+<section class="section-grid" aria-label="Application areas">
+  <article>
+    <h2>Customer app</h2>
+    <p>Browse fresh produce, build an order, and choose a scheduled route window.</p>
+  </article>
+  <article>
+    <h2>Admin dashboard</h2>
+    <p>Manage producers, products, orders, delivery routes, and drivers.</p>
+  </article>
+  <article>
+    <h2>Driver app</h2>
+    <p>Mobile-friendly assigned routes with delivery stops and status updates.</p>
+  </article>
+</section>
+{% endblock %}

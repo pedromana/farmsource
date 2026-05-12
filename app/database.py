@@ -1,38 +1,45 @@
-from __future__ import annotations
+from collections.abc import Generator
 
-from pathlib import Path
-from typing import Generator
-
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = PROJECT_ROOT / "data"
-DATABASE_URL = f"sqlite:///{DATA_DIR / 'farmsource.sqlite3'}"
+from app.config import get_settings
 
 
 class Base(DeclarativeBase):
     pass
 
 
+settings = get_settings()
+
+connect_args = {}
+if settings.database_url.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    future=True,
+    settings.database_url,
+    connect_args=connect_args,
+    pool_pre_ping=True,
 )
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def init_db() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    from app import models  # noqa: F401
+    import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
 
-def get_session() -> Generator[Session, None, None]:
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
+def check_database() -> bool:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+    return True

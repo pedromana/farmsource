@@ -1,0 +1,9 @@
+{
+  "name": "Farmsource",
+  "short_name": "Farmsource",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#2f6f4e",
+  "icons": []
+}
