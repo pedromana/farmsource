@@ -22,12 +22,37 @@ async function refreshCartBadge() {
   setCartBadge(cart.count);
 }
 
-function showCartReadyDialog(productName) {
+let cartBubbleTimer;
+
+function showCartBubble(productName) {
+  const bubble = document.querySelector("[data-cart-bubble]");
+  if (!bubble) return;
+  const text = bubble.querySelector("[data-cart-bubble-text]");
+  if (text) {
+    text.textContent = productName ? `${productName} added to the cart.` : "Item added to the cart.";
+  }
+  bubble.hidden = false;
+  bubble.classList.remove("is-visible");
+  window.requestAnimationFrame(() => bubble.classList.add("is-visible"));
+  window.clearTimeout(cartBubbleTimer);
+  cartBubbleTimer = window.setTimeout(() => {
+    bubble.classList.remove("is-visible");
+    window.setTimeout(() => {
+      bubble.hidden = true;
+    }, 180);
+  }, 3200);
+}
+
+function showCartAddedNotice(productName) {
+  if (localStorage.getItem("farmsourceCartDialogSeen") === "true") {
+    showCartBubble(productName);
+    return;
+  }
   const dialog = document.querySelector("[data-cart-dialog]");
   if (!dialog) return;
   const title = dialog.querySelector("[data-cart-dialog-title]");
   if (title) {
-    title.textContent = productName ? `${productName} added to the cart.` : "Item added to your cart.";
+    title.textContent = "Item added to your cart.";
   }
   localStorage.setItem("farmsourceCartDialogSeen", "true");
   if (typeof dialog.showModal === "function") {
@@ -94,7 +119,7 @@ document.addEventListener("submit", async (event) => {
         button.textContent = originalText;
       }, 1400);
     }
-    showCartReadyDialog(addForm.dataset.productName);
+    showCartAddedNotice(addForm.dataset.productName);
   } catch (error) {
     if (button) {
       button.classList.remove("is-adding", "is-added");

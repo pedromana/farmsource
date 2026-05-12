@@ -25,6 +25,10 @@
           </span>
           <span class="cart-count" data-cart-count {% if not cart_count | default(0) %}hidden{% endif %}>{{ cart_count | default(0) }}</span>
         </a>
+        <div class="cart-bubble" data-cart-bubble hidden>
+          <span data-cart-bubble-text>Item added to the cart.</span>
+          <a href="/customer/cart">View cart</a>
+        </div>
         <a href="/admin">Admin</a>
         <a href="/admin/sources">Sources</a>
         <a href="/admin/producers">Producers</a>
