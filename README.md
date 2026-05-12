@@ -14,6 +14,8 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Product catalog management at `/admin/products`
 - Category management at `/admin/categories`
 - Delivery-window availability at `/admin/availability`
+- Admin operations dashboard at `/admin/dashboard`
+- Admin order, customer, driver, route, delivery-window, and export management
 - Customer catalog at `/customer/catalog`
 - Customer cart and checkout at `/customer/cart` and `/customer/checkout`
 - Stripe Checkout redirect flow with local no-key simulation for development
@@ -28,6 +30,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Rule-based ordering readiness classification for ecommerce, CSA, platform stores, contact-only pages, social media, and unknown destinations
 - Curated v1 product catalog with simple delivery-window inventory
 - Customer ordering flow with cart, scheduled delivery windows, Stripe-hosted payment, and order status pages
+- Simple session-based admin login for v1 operations
 
 ## Project structure
 
@@ -274,6 +277,51 @@ When checkout starts, Farmsource validates product inventory for the selected de
 ## Mobile Wrapper Readiness
 
 The customer app is a responsive, PWA-friendly web app. Future phases can wrap it with Capacitor or a similar tool and add native features such as saved customer accounts, push notifications, subscriptions, promo codes, loyalty, and recurring weekly box ordering.
+
+## Admin Operations Dashboard
+
+Phase 5 adds the v1 manual operations dashboard for running the Seattle pilot. Admin pages are protected by a simple session login:
+
+```text
+/admin/login
+/admin/logout
+```
+
+Default local credentials are seeded from environment variables:
+
+```env
+ADMIN_DEFAULT_EMAIL=admin@farmsource.local
+ADMIN_DEFAULT_PASSWORD=ChangeMe123!
+SESSION_SECRET_KEY=change-this-before-production
+```
+
+Change these values before any shared or production deployment. The first app startup seeds the default admin user when no admin exists.
+
+Operations pages:
+
+- `/admin/dashboard` shows producer, product, order, route, driver, sales, delivery-window, and low-inventory operating metrics.
+- `/admin/orders` supports search/filtering, order detail review, status updates, route assignment, internal notes, and Excel export.
+- `/admin/customers` lists customer delivery/contact records.
+- `/admin/drivers` manages driver profiles, territories, vehicles, active status, and notes.
+- `/admin/routes` creates routes, assigns drivers and delivery windows, adds orders as stops, reorders stops, and updates stop statuses.
+- `/admin/delivery-windows` manages scheduled delivery dates, regions, active status, and order capacity.
+- `/admin/exports` provides Excel exports for orders, routes, producers, products, delivery windows, customers, and drivers.
+
+The intended v1 operating workflow is:
+
+1. Import or manually manage producers.
+2. Add curated products and delivery-window availability.
+3. Create delivery windows for the week.
+4. Customers place orders.
+5. Admin reviews orders and payment state.
+6. Admin creates routes and assigns drivers.
+7. Admin adds orders to route stops and manages stop sequence.
+8. Drivers complete deliveries.
+9. Admin exports operational reports as needed.
+
+Route statuses are `planned`, `assigned`, `in_progress`, `completed`, and `cancelled`. Stop statuses are `pending`, `delivered`, `failed`, and `skipped`.
+
+This is intentionally simple. Future phases can add richer permissions, producer and driver self-service, route optimization, notifications, analytics, warehouse hubs, and multi-region operations without replacing the current tables.
 
 ## Docker
 

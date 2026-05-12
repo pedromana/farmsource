@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -9,27 +10,39 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR
 from app.database import get_db
 from app.models import (
+    Customer,
     DeliveryWindow,
+    Driver,
     ImportRun,
+    Order,
     Producer,
     Product,
     ProductAvailability,
     ProductCategory,
     ProductImage,
+    Route,
+    RouteStop,
     Source,
 )
+from app.services.auth import require_admin
 from app.services.catalog import LOW_INVENTORY_THRESHOLD, low_inventory_availability
 from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
-from app.services.exporter import availability_to_excel, producers_to_excel, products_to_excel
+from app.services.exporter import availability_to_excel, customers_to_excel, delivery_windows_to_excel, drivers_to_excel, orders_to_excel, producers_to_excel, products_to_excel, routes_to_excel
 
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 
 
 @router.get("")
 def admin_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
+    return RedirectResponse("/admin/dashboard", status_code=303)
+
+
+@router.get("/dashboard")
+def operations_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
+    order_status_rows = db.execute(select(Order.order_status, func.count(Order.id)).group_by(Order.order_status)).all()
     return templates.TemplateResponse(
         "admin.html",
         {
@@ -38,7 +51,227 @@ def admin_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "producer_count": db.scalar(select(func.count(Producer.id))),
             "qualified_count": db.scalar(select(func.count(Producer.id)).where(Producer.qualified.is_(True))),
             "product_count": db.scalar(select(func.count(Product.id))),
+            "active_product_count": db.scalar(select(func.count(Product.id)).where(Product.active.is_(True))),
+            "upcoming_window_count": db.scalar(select(func.count(DeliveryWindow.id)).where(DeliveryWindow.active.is_(True))),
+            "open_order_count": db.scalar(select(func.count(Order.id)).where(Order.order_status.in_(["pending", "confirmed", "packed", "assigned_to_route"]))),
+            "active_route_count": db.scalar(select(func.count(Route.id)).where(Route.route_status.in_(["planned", "assigned", "in_progress"]))),
+            "active_driver_count": db.scalar(select(func.count(Driver.id)).where(Driver.active.is_(True))),
+            "total_sales": db.scalar(select(func.coalesce(func.sum(Order.total), 0.0)).where(Order.payment_status == "paid")),
+            "low_inventory_count": len(low_inventory_availability(db)),
+            "orders_by_status": order_status_rows,
         },
+    )
+
+
+@router.get("/orders")
+def list_orders(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    status: str | None = None,
+    delivery_window_id: int | None = None,
+    route_id: int | None = None,
+    customer: str | None = None,
+):
+    query = _filtered_order_query(status, delivery_window_id, route_id, customer)
+    orders = db.scalars(query.order_by(Order.created_at.desc())).all()
+    windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
+    routes = db.scalars(select(Route).order_by(Route.route_name)).all()
+    return templates.TemplateResponse(
+        "admin_orders.html",
+        {"request": request, "orders": orders, "windows": windows, "routes": routes, "filters": {"status": status or "", "delivery_window_id": delivery_window_id, "route_id": route_id, "customer": customer or ""}},
+    )
+
+
+@router.get("/orders/{order_id}")
+def order_detail(order_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    order = db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    routes = db.scalars(select(Route).order_by(Route.route_name)).all()
+    return templates.TemplateResponse("admin_order_detail.html", {"request": request, "order": order, "routes": routes})
+
+
+@router.post("/orders/{order_id}")
+async def update_order(order_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    order = db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    form = await request.form()
+    order.order_status = str(form.get("order_status") or order.order_status)
+    order.route_id = _optional_int(form.get("route_id"))
+    order.internal_notes = _optional(form.get("internal_notes"))
+    if order.route_id and not db.scalars(select(RouteStop).where(RouteStop.route_id == order.route_id, RouteStop.order_id == order.id)).first():
+        max_sequence = db.scalar(select(func.coalesce(func.max(RouteStop.stop_sequence), 0)).where(RouteStop.route_id == order.route_id))
+        db.add(RouteStop(route_id=order.route_id, order_id=order.id, stop_sequence=max_sequence + 1, delivery_notes=order.customer.delivery_notes if order.customer else None))
+    db.commit()
+    return RedirectResponse(f"/admin/orders/{order.id}", status_code=303)
+
+
+@router.get("/customers")
+def list_customers(request: Request, db: Annotated[Session, Depends(get_db)], q: str | None = None):
+    query = select(Customer)
+    if q:
+        query = query.where((Customer.email.ilike(f"%{q}%")) | (Customer.last_name.ilike(f"%{q}%")))
+    customers = db.scalars(query.order_by(Customer.last_name, Customer.first_name)).all()
+    return templates.TemplateResponse("admin_customers.html", {"request": request, "customers": customers, "q": q or ""})
+
+
+@router.get("/drivers")
+def list_drivers(request: Request, db: Annotated[Session, Depends(get_db)]):
+    drivers = db.scalars(select(Driver).order_by(Driver.last_name, Driver.first_name)).all()
+    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": None})
+
+
+@router.get("/drivers/{driver_id}")
+def edit_driver(driver_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    driver = db.get(Driver, driver_id)
+    drivers = db.scalars(select(Driver).order_by(Driver.last_name, Driver.first_name)).all()
+    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": driver})
+
+
+@router.post("/drivers")
+@router.post("/drivers/{driver_id}")
+async def save_driver(request: Request, db: Annotated[Session, Depends(get_db)], driver_id: int | None = None):
+    form = await request.form()
+    driver = db.get(Driver, driver_id) if driver_id else Driver()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    driver.first_name = _required_text(form.get("first_name"), "first_name")
+    driver.last_name = _required_text(form.get("last_name"), "last_name")
+    driver.email = _optional(form.get("email"))
+    driver.phone = _optional(form.get("phone"))
+    driver.territory = _optional(form.get("territory"))
+    driver.vehicle_type = _optional(form.get("vehicle_type"))
+    driver.active = form.get("active") == "on"
+    driver.notes = _optional(form.get("notes"))
+    db.add(driver)
+    db.commit()
+    return RedirectResponse("/admin/drivers", status_code=303)
+
+
+@router.get("/delivery-windows")
+def list_delivery_windows(request: Request, db: Annotated[Session, Depends(get_db)]):
+    windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
+    return templates.TemplateResponse("admin_delivery_windows.html", {"request": request, "windows": windows, "window": None})
+
+
+@router.get("/delivery-windows/{window_id}")
+def edit_delivery_window(window_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    window = db.get(DeliveryWindow, window_id)
+    windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
+    return templates.TemplateResponse("admin_delivery_windows.html", {"request": request, "windows": windows, "window": window})
+
+
+@router.post("/delivery-windows")
+@router.post("/delivery-windows/{window_id}")
+async def save_delivery_window(request: Request, db: Annotated[Session, Depends(get_db)], window_id: int | None = None):
+    form = await request.form()
+    window = db.get(DeliveryWindow, window_id) if window_id else DeliveryWindow()
+    if not window:
+        raise HTTPException(status_code=404, detail="Delivery window not found")
+    window.name = _required_text(form.get("name"), "name")
+    window.region = _optional(form.get("region"))
+    window.delivery_date = _optional_datetime(form.get("delivery_date"))
+    window.start_time = _optional(form.get("start_time"))
+    window.end_time = _optional(form.get("end_time"))
+    window.max_orders = _int(form.get("max_orders"), 40)
+    window.current_order_count = _int(form.get("current_order_count"), 0)
+    window.active = form.get("active") == "on"
+    window.notes = _optional(form.get("notes"))
+    db.add(window)
+    db.commit()
+    return RedirectResponse("/admin/delivery-windows", status_code=303)
+
+
+@router.get("/routes")
+def list_routes(request: Request, db: Annotated[Session, Depends(get_db)]):
+    routes = db.scalars(select(Route).order_by(Route.created_at.desc())).all()
+    drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name)).all()
+    windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
+    orders = db.scalars(select(Order).where(Order.order_status.in_(["confirmed", "packed", "assigned_to_route"])).order_by(Order.created_at)).all()
+    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "route": None, "drivers": drivers, "windows": windows, "orders": orders})
+
+
+@router.get("/routes/{route_id}")
+def edit_route(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name)).all()
+    windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
+    orders = db.scalars(select(Order).where(Order.route_id.is_(None)).order_by(Order.created_at)).all()
+    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": [route] if route else [], "route": route, "drivers": drivers, "windows": windows, "orders": orders})
+
+
+@router.post("/routes")
+@router.post("/routes/{route_id}")
+async def save_route(request: Request, db: Annotated[Session, Depends(get_db)], route_id: int | None = None):
+    form = await request.form()
+    route = db.get(Route, route_id) if route_id else Route()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    route.route_name = _required_text(form.get("route_name"), "route_name")
+    route.delivery_window_id = _optional_int(form.get("delivery_window_id"))
+    route.driver_id = _optional_int(form.get("driver_id"))
+    route.region = _optional(form.get("region"))
+    route.route_status = str(form.get("route_status") or "planned")
+    route.estimated_start_time = _optional(form.get("estimated_start_time"))
+    route.estimated_end_time = _optional(form.get("estimated_end_time"))
+    route.route_pay = _float(form.get("route_pay"), 0.0)
+    route.route_bonus = _float(form.get("route_bonus"), 0.0)
+    route.notes = _optional(form.get("notes"))
+    db.add(route)
+    db.commit()
+    return RedirectResponse("/admin/routes", status_code=303)
+
+
+@router.post("/routes/{route_id}/stops")
+async def add_route_stop(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    form = await request.form()
+    order_id = _required_int(form.get("order_id"), "order_id")
+    max_sequence = db.scalar(select(func.coalesce(func.max(RouteStop.stop_sequence), 0)).where(RouteStop.route_id == route_id))
+    db.add(RouteStop(route_id=route_id, order_id=order_id, stop_sequence=max_sequence + 1, stop_status="pending"))
+    order = db.get(Order, order_id)
+    if order:
+        order.route_id = route_id
+        order.order_status = "assigned_to_route"
+    db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
+
+
+@router.post("/routes/{route_id}/stops/{stop_id}")
+async def update_route_stop(route_id: int, stop_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    stop = db.get(RouteStop, stop_id)
+    form = await request.form()
+    if stop:
+        stop.stop_sequence = _int(form.get("stop_sequence"), stop.stop_sequence)
+        stop.stop_status = str(form.get("stop_status") or stop.stop_status)
+        stop.delivery_notes = _optional(form.get("delivery_notes"))
+        db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
+
+
+@router.get("/exports")
+def exports_page(request: Request):
+    return templates.TemplateResponse("admin_exports.html", {"request": request})
+
+
+@router.get("/exports/{export_type}")
+def export_operational_data(export_type: str, db: Annotated[Session, Depends(get_db)]):
+    exporters = {
+        "orders": lambda: orders_to_excel(db),
+        "routes": lambda: routes_to_excel(db),
+        "producers": lambda: producers_to_excel(db),
+        "products": lambda: products_to_excel(db),
+        "delivery-windows": lambda: delivery_windows_to_excel(db),
+        "customers": lambda: customers_to_excel(db),
+        "drivers": lambda: drivers_to_excel(db),
+    }
+    if export_type not in exporters:
+        raise HTTPException(status_code=404, detail="Export not found")
+    return StreamingResponse(
+        exporters[export_type](),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="farmsource-{export_type}.xlsx"'},
     )
 
 
@@ -474,6 +707,28 @@ def _filtered_product_query(
     return query
 
 
+def _filtered_order_query(
+    status: str | None,
+    delivery_window_id: int | None,
+    route_id: int | None,
+    customer: str | None,
+):
+    query = select(Order).join(Customer)
+    if status:
+        query = query.where(Order.order_status == status)
+    if delivery_window_id:
+        query = query.where(Order.delivery_window_id == delivery_window_id)
+    if route_id:
+        query = query.where(Order.route_id == route_id)
+    if customer:
+        query = query.where(
+            (Customer.email.ilike(f"%{customer}%"))
+            | (Customer.first_name.ilike(f"%{customer}%"))
+            | (Customer.last_name.ilike(f"%{customer}%"))
+        )
+    return query
+
+
 def _product_form_response(request: Request, db: Session, product: Product):
     producers = db.scalars(select(Producer).order_by(Producer.producer_name)).all()
     categories = db.scalars(select(ProductCategory).where(ProductCategory.active.is_(True)).order_by(ProductCategory.name)).all()
@@ -532,6 +787,20 @@ def _required_int(value, field_name: str) -> int:
     if parsed is None:
         raise HTTPException(status_code=400, detail=f"{field_name} is required")
     return parsed
+
+
+def _required_text(value, field_name: str) -> str:
+    value = _optional(value)
+    if not value:
+        raise HTTPException(status_code=400, detail=f"{field_name} is required")
+    return value
+
+
+def _optional_datetime(value) -> datetime | None:
+    value = _optional(value)
+    if not value:
+        return None
+    return datetime.fromisoformat(value)
 
 
 def _int(value, default: int) -> int:

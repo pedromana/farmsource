@@ -5,13 +5,22 @@
   <div class="page-heading">
     <p class="eyebrow">Operations</p>
     <h1>Admin dashboard</h1>
-    <p>Manage generic producer sources, imported producer records, classification status, and exports.</p>
+    <p>Manual operations for the Seattle pilot: orders, routes, drivers, delivery windows, producers, products, and exports.</p>
   </div>
   <div class="stat-grid">
     <article><span>Sources</span><strong>{{ source_count }}</strong></article>
     <article><span>Producers</span><strong>{{ producer_count }}</strong></article>
     <article><span>Qualified</span><strong>{{ qualified_count }}</strong></article>
     <article><span>Products</span><strong>{{ product_count }}</strong></article>
+    <article><span>Open orders</span><strong>{{ open_order_count }}</strong></article>
+    <article><span>Active routes</span><strong>{{ active_route_count }}</strong></article>
+    <article><span>Active drivers</span><strong>{{ active_driver_count }}</strong></article>
+    <article><span>Total sales</span><strong>${{ "%.2f"|format(total_sales or 0) }}</strong></article>
+    <article><span>Low inventory</span><strong>{{ low_inventory_count }}</strong></article>
+    <article><span>Upcoming windows</span><strong>{{ upcoming_window_count }}</strong></article>
+  </div>
+  <div class="dashboard-grid">
+    <article><h2>Orders by status</h2>{% for status, count in orders_by_status %}<p><strong>{{ status }}</strong>: {{ count }}</p>{% else %}<p>No orders yet.</p>{% endfor %}</article>
   </div>
   <div class="dashboard-grid">
     <article><h2>Sources</h2><p>Register CSV files, directories, marketplaces, and future connectors.</p><a class="button" href="/admin/sources">Manage sources</a></article>
@@ -19,6 +28,11 @@
     <article><h2>Producers</h2><p>Review, filter, edit, qualify, and export producer records.</p><a class="button" href="/admin/producers">View producers</a></article>
     <article><h2>Products</h2><p>Manage curated weekly offerings and simple delivery-window inventory.</p><a class="button" href="/admin/products">Manage products</a></article>
     <article><h2>Availability</h2><p>Track active delivery-window availability and low inventory.</p><a class="button" href="/admin/availability">View availability</a></article>
+    <article><h2>Orders</h2><p>Review orders, update status, assign routes, and add notes.</p><a class="button" href="/admin/orders">Manage orders</a></article>
+    <article><h2>Routes</h2><p>Create delivery routes, assign drivers, and organize stops.</p><a class="button" href="/admin/routes">Plan routes</a></article>
+    <article><h2>Drivers</h2><p>Manage driver records, territories, and active status.</p><a class="button" href="/admin/drivers">Manage drivers</a></article>
+    <article><h2>Delivery windows</h2><p>Set scheduled windows, regions, capacity, and active status.</p><a class="button" href="/admin/delivery-windows">Manage windows</a></article>
+    <article><h2>Exports</h2><p>Download operational spreadsheets for launch coordination.</p><a class="button" href="/admin/exports">Open exports</a></article>
   </div>
 </section>
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Admin Login | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <article>
+    <p class="eyebrow">Admin</p>
+    <h1>Operations login</h1>
+    {% if error %}<p class="availability unavailable">{{ error }}</p>{% endif %}
+    <form class="form-grid" method="post" action="/admin/login">
+      <label class="full">Email<input name="email" type="email" required autofocus></label>
+      <label class="full">Password<input name="password" type="password" required></label>
+      <div class="actions full"><button class="primary" type="submit">Log in</button></div>
+    </form>
+  </article>
+</section>
+{% endblock %}

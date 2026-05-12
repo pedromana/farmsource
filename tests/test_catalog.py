@@ -6,8 +6,18 @@ from app.models import Product
 from app.services.catalog import active_delivery_window, active_product_query, remaining_inventory
 
 
+def login_admin(client: TestClient) -> None:
+    response = client.post(
+        "/admin/login",
+        data={"email": "admin@farmsource.local", "password": "ChangeMe123!"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
 def test_seeded_catalog_pages_load() -> None:
     with TestClient(app) as client:
+        login_admin(client)
         for path in (
             "/admin/categories",
             "/admin/products",
@@ -46,6 +56,7 @@ def test_catalog_availability_helpers() -> None:
 
 def test_product_exports_return_excel() -> None:
     with TestClient(app) as client:
+        login_admin(client)
         for path in ("/admin/products/export", "/admin/availability/export"):
             response = client.get(path)
             assert response.status_code == 200

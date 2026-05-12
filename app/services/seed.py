@@ -3,7 +3,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CartItem, CartSession, Customer, DeliveryWindow, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Source
+from app.config import get_settings
+from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source
+from app.services.auth import hash_password
 
 
 CATEGORY_NAMES = [
@@ -21,9 +23,11 @@ CATEGORY_NAMES = [
 
 
 def seed_sample_catalog(db: Session) -> None:
+    _ensure_admin_user(db)
     if db.scalar(select(Product.id).limit(1)):
         _ensure_window_fields(db)
         _ensure_sample_customer_order(db)
+        _ensure_sample_operations(db)
         return
 
     source = db.scalars(select(Source).where(Source.source_name == "Farmsource Sample Data")).first()
@@ -162,6 +166,25 @@ def seed_sample_catalog(db: Session) -> None:
 
     db.commit()
     _ensure_sample_customer_order(db)
+    _ensure_sample_operations(db)
+
+
+def _ensure_admin_user(db: Session) -> None:
+    settings = get_settings()
+    email = settings.admin_default_email.strip().lower()
+    if db.scalars(select(AdminUser).where(AdminUser.email == email)).first():
+        return
+    db.add(
+        AdminUser(
+            email=email,
+            password_hash=hash_password(settings.admin_default_password),
+            first_name="Farmsource",
+            last_name="Admin",
+            role="admin",
+            active=True,
+        )
+    )
+    db.commit()
 
 
 def _ensure_window_fields(db: Session) -> None:
@@ -229,4 +252,58 @@ def _ensure_sample_customer_order(db: Session) -> None:
     if availability:
         availability.reserved_quantity += 1
     window.current_order_count += 1
+    db.commit()
+
+
+def _ensure_sample_operations(db: Session) -> None:
+    driver = db.scalars(select(Driver).where(Driver.email == "driver@example.com")).first()
+    if not driver:
+        driver = Driver(
+            first_name="Sample",
+            last_name="Driver",
+            email="driver@example.com",
+            phone="206-555-0198",
+            territory="Seattle",
+            vehicle_type="Cargo van",
+            active=True,
+            notes="Sample driver for operations dashboard.",
+        )
+        db.add(driver)
+        db.flush()
+
+    window = db.scalars(select(DeliveryWindow).where(DeliveryWindow.active.is_(True))).first()
+    route = db.scalars(select(Route).where(Route.route_name == "Seattle Pilot Route")).first()
+    if not route:
+        route = Route(
+            route_name="Seattle Pilot Route",
+            delivery_window_id=window.id if window else None,
+            driver_id=driver.id,
+            region="Seattle",
+            route_status="planned",
+            estimated_start_time="4:00 PM",
+            estimated_end_time="7:00 PM",
+            route_pay=80.0,
+            route_bonus=0.0,
+            notes="Sample route for launch operations.",
+        )
+        db.add(route)
+        db.flush()
+
+    orders = db.scalars(select(Order).order_by(Order.created_at.asc()).limit(8)).all()
+    existing_order_ids = {stop.order_id for stop in route.stops}
+    next_sequence = len(route.stops) + 1
+    for order in orders:
+        if order.id in existing_order_ids:
+            continue
+        order.route_id = route.id
+        db.add(
+            RouteStop(
+                route_id=route.id,
+                order_id=order.id,
+                stop_sequence=next_sequence,
+                stop_status="pending",
+                delivery_notes=order.customer.delivery_notes if order.customer else None,
+            )
+        )
+        next_sequence += 1
     db.commit()

@@ -5,8 +5,18 @@ from app.main import app
 from app.models import Producer
 
 
+def login_admin(client: TestClient) -> None:
+    response = client.post(
+        "/admin/login",
+        data={"email": "admin@farmsource.local", "password": "ChangeMe123!"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
 def test_admin_pages_load() -> None:
     with TestClient(app) as client:
+        login_admin(client)
         for path in ("/admin", "/admin/sources", "/admin/imports", "/admin/producers"):
             response = client.get(path)
             assert response.status_code == 200
@@ -20,6 +30,7 @@ def test_csv_import_classifies_and_lists_producer() -> None:
     )
 
     with TestClient(app) as client:
+        login_admin(client)
         response = client.post(
             "/admin/imports",
             data={"source_id": ""},
@@ -39,6 +50,7 @@ def test_csv_import_classifies_and_lists_producer() -> None:
 
 def test_producer_export_returns_excel() -> None:
     with TestClient(app) as client:
+        login_admin(client)
         response = client.get("/admin/producers/export")
 
     assert response.status_code == 200

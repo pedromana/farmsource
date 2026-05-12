@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Time, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -286,3 +286,66 @@ class CartItem(Base, TimestampMixin):
 
     cart_session: Mapped[CartSession] = relationship(back_populates="items")
     product: Mapped[Product] = relationship(back_populates="cart_items")
+
+
+class AdminUser(Base, TimestampMixin):
+    __tablename__ = "admin_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    role: Mapped[str] = mapped_column(String(80), default="admin", nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class Driver(Base, TimestampMixin):
+    __tablename__ = "drivers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    first_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), index=True)
+    phone: Mapped[str | None] = mapped_column(String(80))
+    territory: Mapped[str | None] = mapped_column(String(120), index=True)
+    vehicle_type: Mapped[str | None] = mapped_column(String(120))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    routes: Mapped[list["Route"]] = relationship(back_populates="driver")
+
+
+class Route(Base, TimestampMixin):
+    __tablename__ = "routes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    route_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    delivery_window_id: Mapped[int | None] = mapped_column(ForeignKey("delivery_windows.id"), index=True)
+    driver_id: Mapped[int | None] = mapped_column(ForeignKey("drivers.id"), index=True)
+    region: Mapped[str | None] = mapped_column(String(120), index=True)
+    route_status: Mapped[str] = mapped_column(String(40), default="planned", nullable=False, index=True)
+    estimated_start_time: Mapped[str | None] = mapped_column(String(20))
+    estimated_end_time: Mapped[str | None] = mapped_column(String(20))
+    route_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    route_bonus: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    delivery_window: Mapped[DeliveryWindow | None] = relationship()
+    driver: Mapped[Driver | None] = relationship(back_populates="routes")
+    stops: Mapped[list["RouteStop"]] = relationship(back_populates="route", cascade="all, delete-orphan", order_by="RouteStop.stop_sequence")
+
+
+class RouteStop(Base, TimestampMixin):
+    __tablename__ = "route_stops"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    route_id: Mapped[int] = mapped_column(ForeignKey("routes.id"), nullable=False, index=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False, index=True)
+    stop_sequence: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    stop_status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False, index=True)
+    delivery_notes: Mapped[str | None] = mapped_column(Text)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    route: Mapped[Route] = relationship(back_populates="stops")
+    order: Mapped[Order] = relationship()

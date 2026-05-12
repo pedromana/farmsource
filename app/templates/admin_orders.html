@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Orders | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading"><div><p class="eyebrow">Operations</p><h1>Orders</h1><p>Review customer orders and prepare them for routing.</p></div><a class="button" href="/admin/exports/orders">Export orders</a></div>
+  <form class="filter-bar compact-filter" method="get" action="/admin/orders">
+    <input name="customer" placeholder="Customer/email" value="{{ filters.customer }}">
+    <select name="status"><option value="">Any status</option>{% for s in ['pending','confirmed','packed','assigned_to_route','out_for_delivery','delivered','cancelled'] %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+    <select name="delivery_window_id"><option value="">Any window</option>{% for window in windows %}<option value="{{ window.id }}" {% if filters.delivery_window_id == window.id %}selected{% endif %}>{{ window.name }}</option>{% endfor %}</select>
+    <select name="route_id"><option value="">Any route</option>{% for route in routes %}<option value="{{ route.id }}" {% if filters.route_id == route.id %}selected{% endif %}>{{ route.route_name }}</option>{% endfor %}</select>
+    <button type="submit">Filter</button>
+  </form>
+  <div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Window</th><th>Status</th><th>Total</th><th>Route</th><th></th></tr></thead><tbody>
+    {% for order in orders %}<tr><td>{{ order.order_number }}</td><td>{{ order.customer.first_name }} {{ order.customer.last_name }}<br><span>{{ order.customer.email }}</span></td><td>{{ order.delivery_window.name if order.delivery_window else "" }}</td><td>{{ order.order_status }}<br><span>{{ order.payment_status }}</span></td><td>${{ "%.2f"|format(order.total) }}</td><td>{{ order.route_id or "" }}</td><td><a href="/admin/orders/{{ order.id }}">Open</a></td></tr>{% else %}<tr><td colspan="7">No orders found.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}
