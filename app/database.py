@@ -51,19 +51,27 @@ def _migrate_legacy_sqlite_schema() -> None:
         return
 
     inspector = inspect(engine)
-    if "producers" not in inspector.get_table_names():
-        return
-
-    columns = {column["name"] for column in inspector.get_columns("producers")}
-    if "producer_name" in columns:
-        product_columns = set()
-        if "products" in inspector.get_table_names():
-            product_columns = {column["name"] for column in inspector.get_columns("products")}
-        if not product_columns or "producer_id" in product_columns:
-            return
+    table_names = inspector.get_table_names()
+    producer_columns = set()
+    if "producers" in table_names:
+        producer_columns = {column["name"] for column in inspector.get_columns("producers")}
+    product_columns = set()
+    if "products" in table_names:
+        product_columns = {column["name"] for column in inspector.get_columns("products")}
 
     with engine.begin() as connection:
-        if "producer_name" not in columns:
+        if "producers" in table_names and "producer_name" not in producer_columns:
             connection.execute(text("DROP TABLE IF EXISTS producers"))
-        if "products" in inspector.get_table_names() and "producer_id" not in product_columns:
+        if "products" in table_names and "producer_id" not in product_columns:
             connection.execute(text("DROP TABLE IF EXISTS products"))
+        if "delivery_windows" in table_names:
+            window_columns = {column["name"] for column in inspector.get_columns("delivery_windows")}
+            delivery_window_additions = {
+                "start_time": "VARCHAR(20)",
+                "end_time": "VARCHAR(20)",
+                "max_orders": "INTEGER NOT NULL DEFAULT 40",
+                "current_order_count": "INTEGER NOT NULL DEFAULT 0",
+            }
+            for column_name, ddl in delivery_window_additions.items():
+                if column_name not in window_columns:
+                    connection.execute(text(f"ALTER TABLE delivery_windows ADD COLUMN {column_name} {ddl}"))

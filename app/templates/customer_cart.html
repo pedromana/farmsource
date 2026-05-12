@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Cart | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <div class="page-heading">
+    <p class="eyebrow">Checkout</p>
+    <h1>Your cart</h1>
+  </div>
+  {% if cart.items %}
+    <div class="cart-list">
+      {% for item in cart.items %}
+      <article class="cart-row">
+        <div>
+          <h2>{{ item.product.name }}</h2>
+          <p>${{ "%.2f"|format(item.product.price) }} / {{ item.product.unit }}</p>
+        </div>
+        <form method="post" action="/customer/cart/update" class="cart-qty">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <input type="number" name="quantity" min="0" value="{{ item.quantity }}">
+          <button type="submit">Update</button>
+        </form>
+        <form method="post" action="/customer/cart/remove">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <button type="submit">Remove</button>
+        </form>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="summary-card">
+      <dl class="summary-list">
+        <div><dt>Subtotal</dt><dd>${{ "%.2f"|format(totals.subtotal) }}</dd></div>
+        <div><dt>Delivery</dt><dd>${{ "%.2f"|format(totals.delivery_fee) }}</dd></div>
+        <div><dt>Taxes</dt><dd>${{ "%.2f"|format(totals.taxes) }}</dd></div>
+        <div><dt>Total</dt><dd>${{ "%.2f"|format(totals.total) }}</dd></div>
+      </dl>
+    </div>
+    <div class="actions">
+      <a class="button" href="/customer/catalog">Keep shopping</a>
+      <a class="button primary" href="/customer/checkout">Checkout</a>
+    </div>
+  {% else %}
+    <article><h2>Your cart is empty</h2><p>Add curated produce from the weekly catalog.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
+  {% endif %}
+</section>
+{% endblock %}

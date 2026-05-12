@@ -1,0 +1,67 @@
+from fastapi.testclient import TestClient
+
+from app.database import SessionLocal
+from app.main import app
+from app.models import DeliveryWindow, Order, Product
+
+
+def test_customer_cart_checkout_local_payment_flow() -> None:
+    with TestClient(app) as client:
+        with SessionLocal() as db:
+            product = db.query(Product).filter(Product.active.is_(True)).first()
+            window = db.query(DeliveryWindow).filter(DeliveryWindow.active.is_(True)).first()
+            assert product is not None
+            assert window is not None
+            product_id = product.id
+            window_id = window.id
+
+        add_response = client.post(
+            "/customer/cart/add",
+            data={"product_id": product_id, "quantity": 1},
+            follow_redirects=False,
+        )
+        assert add_response.status_code == 303
+
+        cart_response = client.get("/customer/cart")
+        assert cart_response.status_code == 200
+        assert "Your cart" in cart_response.text
+
+        checkout_response = client.get("/customer/checkout")
+        assert checkout_response.status_code == 200
+
+        pay_response = client.post(
+            "/customer/checkout",
+            data={
+                "first_name": "Phase",
+                "last_name": "Four",
+                "email": "phase4@example.com",
+                "phone": "206-555-0101",
+                "address_line_1": "456 Pine St",
+                "address_line_2": "",
+                "city": "Seattle",
+                "state": "WA",
+                "zip_code": "98101",
+                "delivery_window_id": str(window_id),
+                "delivery_notes": "",
+                "customer_notes": "",
+            },
+            follow_redirects=False,
+        )
+        assert pay_response.status_code == 303
+        assert "/customer/payment-success" in pay_response.headers["location"]
+
+        success_response = client.get(pay_response.headers["location"], follow_redirects=True)
+        assert success_response.status_code == 200
+        assert "Thanks for your order" in success_response.text
+
+    with SessionLocal() as db:
+        order = db.query(Order).filter(Order.customer.has(email="phase4@example.com")).order_by(Order.id.desc()).first()
+        assert order is not None
+        assert order.payment_status == "paid"
+        assert order.order_status == "confirmed"
+
+
+def test_order_lookup_page_loads() -> None:
+    with TestClient(app) as client:
+        response = client.get("/customer/orders?email=sample.customer@example.com")
+        assert response.status_code == 200

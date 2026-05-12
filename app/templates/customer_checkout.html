@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Checkout | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <div class="page-heading">
+    <p class="eyebrow">Scheduled delivery</p>
+    <h1>Checkout</h1>
+    <p>Select a neighborhood delivery window and enter delivery details.</p>
+  </div>
+  {% if cart.items and windows %}
+  <form class="form-grid" method="post" action="/customer/checkout">
+    <label>First name<input name="first_name" required></label>
+    <label>Last name<input name="last_name" required></label>
+    <label>Email<input name="email" type="email" required></label>
+    <label>Phone<input name="phone"></label>
+    <label class="full">Address<input name="address_line_1" required></label>
+    <label class="full">Apartment, suite, etc.<input name="address_line_2"></label>
+    <label>City<input name="city" value="Seattle" required></label>
+    <label>State<input name="state" value="WA" required></label>
+    <label>ZIP code<input name="zip_code" required></label>
+    <label>Delivery window
+      <select name="delivery_window_id" required>
+        {% for window in windows %}
+          <option value="{{ window.id }}">{{ window.name }} - {{ window.region or "Seattle" }} {{ window.start_time or "" }}-{{ window.end_time or "" }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="full">Delivery notes<textarea name="delivery_notes"></textarea></label>
+    <label class="full">Order notes<textarea name="customer_notes"></textarea></label>
+    <div class="summary-card full">
+      <h2>Order summary</h2>
+      <dl class="summary-list">
+        <div><dt>Subtotal</dt><dd>${{ "%.2f"|format(totals.subtotal) }}</dd></div>
+        <div><dt>Delivery</dt><dd>${{ "%.2f"|format(totals.delivery_fee) }}</dd></div>
+        <div><dt>Taxes</dt><dd>${{ "%.2f"|format(totals.taxes) }}</dd></div>
+        <div><dt>Total</dt><dd>${{ "%.2f"|format(totals.total) }}</dd></div>
+      </dl>
+    </div>
+    <div class="actions full">
+      <a class="button" href="/customer/cart">Back to cart</a>
+      <button class="primary" type="submit">Continue to Stripe Checkout</button>
+    </div>
+  </form>
+  {% else %}
+    <article><h2>Checkout unavailable</h2><p>Your cart is empty or no delivery windows are open.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
+  {% endif %}
+</section>
+{% endblock %}

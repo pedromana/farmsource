@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Payment Cancelled | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <article>
+    <p class="eyebrow">Payment cancelled</p>
+    <h1>Your payment was not completed.</h1>
+    <p>{% if order %}Order {{ order.order_number }} was cancelled and inventory was released.{% else %}No order was charged.{% endif %}</p>
+    <a class="button primary" href="/customer/catalog">Return to catalog</a>
+  </article>
+</section>
+{% endblock %}

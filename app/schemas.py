@@ -120,3 +120,39 @@ class ProductAvailabilityRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerRead(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    email: str
+    phone: str | None = None
+    address_line_1: str
+    address_line_2: str | None = None
+    city: str
+    state: str
+    zip_code: str
+    delivery_notes: str | None = None
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderRead(BaseModel):
+    id: int
+    customer_id: int
+    order_number: str
+    order_status: str
+    delivery_window_id: int | None = None
+    subtotal: float
+    delivery_fee: float
+    taxes: float
+    total: float
+    payment_status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

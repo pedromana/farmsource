@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Orders | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <div class="page-heading"><p class="eyebrow">Orders</p><h1>Order status</h1></div>
+  <form class="filter-bar compact-filter" method="get" action="/customer/orders">
+    <input name="email" type="email" placeholder="Email address" value="{{ email }}" required>
+    <button type="submit">Find orders</button>
+  </form>
+  <div class="cart-list">
+    {% for order in orders %}
+      <article><h2>{{ order.order_number }}</h2><p>{{ order.order_status }} | {{ order.payment_status }} | ${{ "%.2f"|format(order.total) }}</p><a class="button" href="/customer/order/{{ order.id }}">View</a></article>
+    {% else %}
+      <article><h2>No orders shown</h2><p>Enter your email to view matching orders.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

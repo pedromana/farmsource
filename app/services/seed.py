@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import DeliveryWindow, Producer, Product, ProductAvailability, ProductCategory, Source
+from app.models import CartItem, CartSession, Customer, DeliveryWindow, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Source
 
 
 CATEGORY_NAMES = [
@@ -22,6 +22,8 @@ CATEGORY_NAMES = [
 
 def seed_sample_catalog(db: Session) -> None:
     if db.scalar(select(Product.id).limit(1)):
+        _ensure_window_fields(db)
+        _ensure_sample_customer_order(db)
         return
 
     source = db.scalars(select(Source).where(Source.source_name == "Farmsource Sample Data")).first()
@@ -75,6 +77,10 @@ def seed_sample_catalog(db: Session) -> None:
             name="Seattle Weekly Delivery",
             region="Seattle",
             delivery_date=datetime.now(UTC) + timedelta(days=3),
+            start_time="4:00 PM",
+            end_time="7:00 PM",
+            max_orders=40,
+            current_order_count=0,
             active=True,
             notes="Sample active delivery window.",
         )
@@ -154,4 +160,73 @@ def seed_sample_catalog(db: Session) -> None:
             )
         )
 
+    db.commit()
+    _ensure_sample_customer_order(db)
+
+
+def _ensure_window_fields(db: Session) -> None:
+    for window in db.scalars(select(DeliveryWindow)).all():
+        if not window.start_time:
+            window.start_time = "4:00 PM"
+        if not window.end_time:
+            window.end_time = "7:00 PM"
+        if not window.max_orders:
+            window.max_orders = 40
+    db.commit()
+
+
+def _ensure_sample_customer_order(db: Session) -> None:
+    if db.scalar(select(Order.id).limit(1)):
+        return
+    product = db.scalars(select(Product).where(Product.active.is_(True))).first()
+    window = db.scalars(select(DeliveryWindow).where(DeliveryWindow.active.is_(True))).first()
+    if not product or not window:
+        return
+    customer = Customer(
+        first_name="Sample",
+        last_name="Customer",
+        email="sample.customer@example.com",
+        phone="206-555-0100",
+        address_line_1="123 Pike St",
+        city="Seattle",
+        state="WA",
+        zip_code="98101",
+        delivery_notes="Leave by the front door.",
+        active=True,
+    )
+    db.add(customer)
+    db.flush()
+    cart = CartSession(session_id="sample-cart-session", customer_id=customer.id, status="converted")
+    db.add(cart)
+    db.flush()
+    db.add(CartItem(cart_session_id=cart.id, product_id=product.id, quantity=1))
+    order = Order(
+        customer_id=customer.id,
+        order_number="FS-SAMPLE-0001",
+        order_status="confirmed",
+        delivery_window_id=window.id,
+        delivery_address=customer.address_line_1,
+        delivery_city=customer.city,
+        delivery_state=customer.state,
+        delivery_zip=customer.zip_code,
+        subtotal=product.price,
+        delivery_fee=6.99,
+        taxes=0.0,
+        total=round(product.price + 6.99, 2),
+        payment_status="paid",
+        paid_at=datetime.now(UTC),
+        customer_notes="Sample order for local review.",
+    )
+    db.add(order)
+    db.flush()
+    db.add(OrderItem(order_id=order.id, product_id=product.id, quantity=1, unit_price=product.price, total_price=product.price))
+    availability = db.scalars(
+        select(ProductAvailability).where(
+            ProductAvailability.product_id == product.id,
+            ProductAvailability.delivery_window_id == window.id,
+        )
+    ).first()
+    if availability:
+        availability.reserved_quantity += 1
+    window.current_order_count += 1
     db.commit()

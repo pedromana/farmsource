@@ -17,6 +17,9 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL",
     )
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+    stripe_secret_key: str | None = Field(default=None, validation_alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: str | None = Field(default=None, validation_alias="STRIPE_PUBLISHABLE_KEY")
+    app_base_url: str = Field(default="http://127.0.0.1:8000", validation_alias="APP_BASE_URL")
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

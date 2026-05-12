@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Time, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -123,10 +123,15 @@ class DeliveryWindow(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     region: Mapped[str | None] = mapped_column(String(120), index=True)
     delivery_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    start_time: Mapped[str | None] = mapped_column(String(20))
+    end_time: Mapped[str | None] = mapped_column(String(20))
+    max_orders: Mapped[int] = mapped_column(Integer, default=40, nullable=False)
+    current_order_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     notes: Mapped[str | None] = mapped_column(Text)
 
     availability: Mapped[list["ProductAvailability"]] = relationship(back_populates="delivery_window")
+    orders: Mapped[list["Order"]] = relationship(back_populates="delivery_window")
 
 
 class Product(Base, TimestampMixin):
@@ -159,6 +164,8 @@ class Product(Base, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="ProductImage.sort_order",
     )
+    order_items: Mapped[list["OrderItem"]] = relationship(back_populates="product")
+    cart_items: Mapped[list["CartItem"]] = relationship(back_populates="product")
 
 
 class ProductAvailability(Base, TimestampMixin):
@@ -191,3 +198,91 @@ class ProductImage(Base):
     )
 
     product: Mapped[Product] = relationship(back_populates="images")
+
+
+class Customer(Base, TimestampMixin):
+    __tablename__ = "customers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    first_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    phone: Mapped[str | None] = mapped_column(String(80))
+    address_line_1: Mapped[str] = mapped_column(String(255), nullable=False)
+    address_line_2: Mapped[str | None] = mapped_column(String(255))
+    city: Mapped[str] = mapped_column(String(120), nullable=False)
+    state: Mapped[str] = mapped_column(String(40), nullable=False)
+    zip_code: Mapped[str] = mapped_column(String(20), nullable=False)
+    delivery_notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    orders: Mapped[list["Order"]] = relationship(back_populates="customer")
+    cart_sessions: Mapped[list["CartSession"]] = relationship(back_populates="customer")
+
+
+class Order(Base, TimestampMixin):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False, index=True)
+    order_number: Mapped[str] = mapped_column(String(40), nullable=False, unique=True, index=True)
+    order_status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False, index=True)
+    delivery_window_id: Mapped[int | None] = mapped_column(ForeignKey("delivery_windows.id"), index=True)
+    delivery_address: Mapped[str] = mapped_column(String(255), nullable=False)
+    delivery_city: Mapped[str] = mapped_column(String(120), nullable=False)
+    delivery_state: Mapped[str] = mapped_column(String(40), nullable=False)
+    delivery_zip: Mapped[str] = mapped_column(String(20), nullable=False)
+    subtotal: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    delivery_fee: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    taxes: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    total: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    payment_status: Mapped[str] = mapped_column(String(40), default="unpaid", nullable=False, index=True)
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    route_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    customer_notes: Mapped[str | None] = mapped_column(Text)
+    internal_notes: Mapped[str | None] = mapped_column(Text)
+
+    customer: Mapped[Customer] = relationship(back_populates="orders")
+    delivery_window: Mapped[DeliveryWindow | None] = relationship(back_populates="orders")
+    items: Mapped[list["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    unit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    total_price: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    order: Mapped[Order] = relationship(back_populates="items")
+    product: Mapped[Product] = relationship(back_populates="order_items")
+
+
+class CartSession(Base, TimestampMixin):
+    __tablename__ = "cart_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
+    customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="active", nullable=False, index=True)
+
+    customer: Mapped[Customer | None] = relationship(back_populates="cart_sessions")
+    items: Mapped[list["CartItem"]] = relationship(back_populates="cart_session", cascade="all, delete-orphan")
+
+
+class CartItem(Base, TimestampMixin):
+    __tablename__ = "cart_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    cart_session_id: Mapped[int] = mapped_column(ForeignKey("cart_sessions.id"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    cart_session: Mapped[CartSession] = relationship(back_populates="items")
+    product: Mapped[Product] = relationship(back_populates="cart_items")

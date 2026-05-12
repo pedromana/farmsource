@@ -15,6 +15,8 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Category management at `/admin/categories`
 - Delivery-window availability at `/admin/availability`
 - Customer catalog at `/customer/catalog`
+- Customer cart and checkout at `/customer/cart` and `/customer/checkout`
+- Stripe Checkout redirect flow with local no-key simulation for development
 - Driver mobile-friendly shell at `/driver`
 - Landing page at `/`
 - Health check at `/health`
@@ -25,6 +27,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - pandas and openpyxl dependencies for later Excel export work
 - Rule-based ordering readiness classification for ecommerce, CSA, platform stores, contact-only pages, social media, and unknown destinations
 - Curated v1 product catalog with simple delivery-window inventory
+- Customer ordering flow with cart, scheduled delivery windows, Stripe-hosted payment, and order status pages
 
 ## Project structure
 
@@ -204,6 +207,73 @@ Inventory is deliberately simple for v1:
 - low inventory view/export
 
 Future phases can add subscriptions, recurring weekly boxes, producer self-service, dynamic pricing, advanced inventory, multiple regions, and richer delivery planning without replacing the v1 catalog structure.
+
+## Customer Ordering
+
+Phase 4 adds a mobile-friendly customer ordering flow:
+
+1. Browse the catalog at `/customer/catalog`.
+2. View products at `/customer/product/{id}`.
+3. Add products to the cart.
+4. Review the cart at `/customer/cart`.
+5. Enter delivery details and select a delivery window at `/customer/checkout`.
+6. Continue to Stripe-hosted Checkout.
+7. Return to `/customer/payment-success`.
+8. View confirmation at `/customer/order-confirmation/{order_id}`.
+9. View order status at `/customer/order/{id}` or search by email at `/customer/orders`.
+
+Order status values:
+
+- `pending`
+- `confirmed`
+- `packed`
+- `assigned_to_route`
+- `out_for_delivery`
+- `delivered`
+- `cancelled`
+
+Payment status values:
+
+- `unpaid`
+- `pending`
+- `paid`
+- `failed`
+- `refunded`
+
+## Stripe Setup
+
+Stripe uses hosted Checkout only. Farmsource does not collect card numbers or render custom credit card fields.
+
+Add these values to `.env`:
+
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+APP_BASE_URL=http://127.0.0.1:8000
+```
+
+For local development without `STRIPE_SECRET_KEY`, the app redirects to a local simulated payment success URL so the full order flow can be tested. With a real Stripe secret key, the checkout route creates a Stripe Checkout Session and redirects the customer to Stripe.
+
+A placeholder webhook endpoint exists at:
+
+```text
+POST /stripe/webhook
+```
+
+Future work should add Stripe signature verification and event handling for asynchronous payment updates.
+
+## Delivery Window Logic
+
+Customers only see delivery windows where:
+
+- `active = true`
+- `current_order_count < max_orders`
+
+When checkout starts, Farmsource validates product inventory for the selected delivery window, creates a pending order, increments `reserved_quantity`, and increments the delivery window order count. If payment is cancelled, unpaid order inventory is released.
+
+## Mobile Wrapper Readiness
+
+The customer app is a responsive, PWA-friendly web app. Future phases can wrap it with Capacitor or a similar tool and add native features such as saved customer accounts, push notifications, subscriptions, promo codes, loyalty, and recurring weekly box ordering.
 
 ## Docker
 
