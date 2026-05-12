@@ -1,0 +1,21 @@
+<article class="product-card">
+  <a class="product-image" href="/customer/product/{{ product.id }}">
+    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}">
+  </a>
+  <div class="product-card-body">
+    <p class="eyebrow">{{ product.category.name if product.category else "Local product" }}</p>
+    <h2><a href="/customer/product/{{ product.id }}">{{ product.name }}</a></h2>
+    <p>{{ product.short_description or "" }}</p>
+    <div class="product-meta">
+      <strong>${{ "%.2f"|format(product.price) }}</strong>
+      <span>/ {{ product.unit }}</span>
+    </div>
+    <p class="farm-name">{{ product.producer.producer_name if product.producer else "Local producer" }}</p>
+    {% set current_availability = current_availability_for_product(product, delivery_window) %}
+    {% if current_availability %}
+      <p class="availability">{{ remaining_inventory(current_availability) }} available for {{ delivery_window.name if delivery_window else "current delivery" }}</p>
+    {% else %}
+      <p class="availability unavailable">Currently unavailable</p>
+    {% endif %}
+  </div>
+</article>

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} | Farmsource{% endblock %}
+{% block content %}
+<section class="product-detail">
+  <div class="product-detail-image">
+    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}">
+  </div>
+  <div class="product-detail-copy">
+    <p class="eyebrow">{{ product.category.name if product.category else "Local product" }}</p>
+    <h1>{{ product.name }}</h1>
+    <p class="farm-name">{{ product.producer.producer_name if product.producer else "Local producer" }}</p>
+    <p>{{ product.full_description or product.short_description or "" }}</p>
+    <div class="product-price">${{ "%.2f"|format(product.price) }} <span>/ {{ product.unit }}</span></div>
+    {% if availability %}
+      <p class="availability">{{ remaining_inventory(availability) }} available for {{ delivery_window.name if delivery_window else "current delivery" }}</p>
+    {% else %}
+      <p class="availability unavailable">Currently unavailable for the active delivery window.</p>
+    {% endif %}
+    <div class="actions">
+      <a class="button primary" href="/customer/catalog">Back to catalog</a>
+      {% if product.category %}<a class="button" href="/customer/category/{{ product.category.id }}">More {{ product.category.name }}</a>{% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

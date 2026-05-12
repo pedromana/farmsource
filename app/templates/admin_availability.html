@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Availability | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">Catalog</p>
+      <h1>Availability</h1>
+      <p>Simple delivery-window inventory: available quantity minus reserved quantity.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/availability/export">Export availability</a>
+      <a class="button" href="/admin/availability/export?low_inventory=true">Export low inventory</a>
+    </div>
+  </div>
+  <form class="form-grid panel" method="post" action="/admin/availability">
+    <label>Product
+      <select name="product_id" required>
+        {% for product in products %}
+          <option value="{{ product.id }}">{{ product.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Delivery window
+      <select name="delivery_window_id">
+        <option value="">No window</option>
+        {% for window in windows %}
+          <option value="{{ window.id }}">{{ window.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Available quantity<input name="available_quantity" type="number" min="0" value="0"></label>
+    <label>Reserved quantity<input name="reserved_quantity" type="number" min="0" value="0"></label>
+    <label>Status<select name="status"><option value="active">active</option><option value="inactive">inactive</option><option value="sold_out">sold_out</option></select></label>
+    <div class="actions full"><button class="primary" type="submit">Add availability</button></div>
+  </form>
+  <h2>Low inventory</h2>
+  <div class="section-grid low-grid">
+    {% for row in low_inventory %}
+      <article><h2>{{ row.product.name }}</h2><p>{{ row.available_quantity - row.reserved_quantity }} remaining for {{ row.delivery_window.name if row.delivery_window else "unassigned window" }}</p></article>
+    {% else %}
+      <article><h2>No low inventory</h2><p>All active items are above the v1 low inventory threshold.</p></article>
+    {% endfor %}
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Product</th><th>Window</th><th>Available</th><th>Reserved</th><th>Remaining</th><th>Status</th><th>Save</th></tr></thead>
+      <tbody>
+      {% for row in availability %}
+        <tr>
+          <form method="post" action="/admin/availability/{{ row.id }}">
+            <td>{{ row.product.name }}</td>
+            <td>{{ row.delivery_window.name if row.delivery_window else "" }}</td>
+            <td><input name="available_quantity" type="number" min="0" value="{{ row.available_quantity }}"></td>
+            <td><input name="reserved_quantity" type="number" min="0" value="{{ row.reserved_quantity }}"></td>
+            <td>{{ row.available_quantity - row.reserved_quantity }}</td>
+            <td><select name="status"><option value="active" {% if row.status == 'active' %}selected{% endif %}>active</option><option value="inactive" {% if row.status == 'inactive' %}selected{% endif %}>inactive</option><option value="sold_out" {% if row.status == 'sold_out' %}selected{% endif %}>sold_out</option></select></td>
+            <td><button type="submit">Save</button></td>
+          </form>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No availability records found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

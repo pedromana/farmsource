@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Catalog | Farmsource{% endblock %}
+{% block content %}
+<section class="catalog-hero">
+  <div>
+    <p class="eyebrow">Weekly marketplace</p>
+    <h1>Curated local produce for scheduled delivery.</h1>
+    <p>{{ delivery_window.name if delivery_window else "Next delivery window" }}</p>
+  </div>
+</section>
+<section class="workspace wide">
+  <div class="category-strip">
+    {% for category in categories %}
+      <a href="/customer/category/{{ category.id }}">{{ category.name }}</a>
+    {% endfor %}
+  </div>
+  <div class="page-heading">
+    <p class="eyebrow">Featured</p>
+    <h1>Fresh this week</h1>
+  </div>
+  <div class="catalog-grid">
+    {% for product in featured_products %}
+      {% include "_product_card.html" %}
+    {% else %}
+      <article><h2>No featured products yet</h2><p>Add featured products from the admin catalog.</p></article>
+    {% endfor %}
+  </div>
+  <div class="page-heading catalog-section-heading">
+    <p class="eyebrow">All products</p>
+    <h1>Available now</h1>
+  </div>
+  <div class="catalog-grid">
+    {% for product in products %}
+      {% include "_product_card.html" %}
+    {% else %}
+      <article><h2>No available products</h2><p>Check admin availability for the active delivery window.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

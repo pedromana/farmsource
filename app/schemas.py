@@ -66,3 +66,57 @@ class ImportRunRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductCategoryBase(BaseModel):
+    name: str
+    description: str | None = None
+    active: bool = True
+
+
+class ProductCategoryRead(ProductCategoryBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductBase(BaseModel):
+    producer_id: int | None = None
+    category_id: int | None = None
+    name: str
+    short_description: str | None = None
+    full_description: str | None = None
+    sku: str | None = None
+    unit: str = "each"
+    price: float = 0.0
+    compare_at_price: float | None = None
+    image_url: str | None = None
+    featured: bool = False
+    active: bool = True
+    seasonal: bool = False
+    delivery_eligible: bool = True
+
+
+class ProductRead(ProductBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductAvailabilityRead(BaseModel):
+    id: int
+    product_id: int
+    delivery_window_id: int | None = None
+    available_quantity: int
+    reserved_quantity: int
+    status: str
+    available_from: datetime | None = None
+    available_until: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

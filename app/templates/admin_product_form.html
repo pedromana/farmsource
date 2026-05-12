@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Product | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading">
+    <p class="eyebrow">Catalog</p>
+    <h1>{{ "Edit product" if product.id else "New product" }}</h1>
+  </div>
+  <form class="form-grid" method="post" action="{{ '/admin/products/' ~ product.id if product.id else '/admin/products' }}">
+    <label>Producer
+      <select name="producer_id">
+        <option value="">No producer</option>
+        {% for producer in producers %}
+          <option value="{{ producer.id }}" {% if product.producer_id == producer.id %}selected{% endif %}>{{ producer.producer_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Category
+      <select name="category_id">
+        <option value="">No category</option>
+        {% for category in categories %}
+          <option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Name<input name="name" required value="{{ product.name or '' }}"></label>
+    <label>SKU<input name="sku" value="{{ product.sku or '' }}"></label>
+    <label>Unit<input name="unit" value="{{ product.unit or 'each' }}"></label>
+    <label>Price<input name="price" type="number" min="0" step="0.01" value="{{ product.price or 0 }}"></label>
+    <label>Compare at price<input name="compare_at_price" type="number" min="0" step="0.01" value="{{ product.compare_at_price or '' }}"></label>
+    <label>Primary image URL<input name="image_url" value="{{ product.image_url or '' }}"></label>
+    <label>Extra image URL<input name="image_url_2" value="{{ product.images[1].image_url if product.images|length > 1 else '' }}"></label>
+    <label>Extra image URL<input name="image_url_3" value="{{ product.images[2].image_url if product.images|length > 2 else '' }}"></label>
+    <label class="check-row"><input name="featured" type="checkbox" {% if product.featured %}checked{% endif %}> Featured</label>
+    <label class="check-row"><input name="active" type="checkbox" {% if product.active %}checked{% endif %}> Active</label>
+    <label class="check-row"><input name="seasonal" type="checkbox" {% if product.seasonal %}checked{% endif %}> Seasonal</label>
+    <label class="check-row"><input name="delivery_eligible" type="checkbox" {% if product.delivery_eligible %}checked{% endif %}> Delivery eligible</label>
+    <label class="full">Short description<textarea name="short_description">{{ product.short_description or '' }}</textarea></label>
+    <label class="full">Full description<textarea name="full_description">{{ product.full_description or '' }}</textarea></label>
+    <div class="actions full">
+      <button class="primary" type="submit">Save product</button>
+      <a class="button" href="/admin/products">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

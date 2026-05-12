@@ -56,7 +56,14 @@ def _migrate_legacy_sqlite_schema() -> None:
 
     columns = {column["name"] for column in inspector.get_columns("producers")}
     if "producer_name" in columns:
-        return
+        product_columns = set()
+        if "products" in inspector.get_table_names():
+            product_columns = {column["name"] for column in inspector.get_columns("products")}
+        if not product_columns or "producer_id" in product_columns:
+            return
 
     with engine.begin() as connection:
-        connection.execute(text("DROP TABLE IF EXISTS producers"))
+        if "producer_name" not in columns:
+            connection.execute(text("DROP TABLE IF EXISTS producers"))
+        if "products" in inspector.get_table_names() and "producer_id" not in product_columns:
+            connection.execute(text("DROP TABLE IF EXISTS products"))

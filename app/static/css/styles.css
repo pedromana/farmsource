@@ -328,6 +328,139 @@ td span {
   margin: 0;
 }
 
+.compact-filter {
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+}
+
+.catalog-hero {
+  min-height: 42vh;
+  display: grid;
+  align-items: end;
+  padding: clamp(2rem, 8vw, 5rem) clamp(1rem, 4vw, 3rem);
+  background:
+    linear-gradient(rgba(29, 42, 36, 0.08), rgba(247, 245, 239, 0.95)),
+    url("https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1800&q=80") center/cover;
+}
+
+.catalog-hero > div {
+  width: min(900px, 100%);
+}
+
+.category-strip {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.category-strip a {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--accent-dark);
+  flex: 0 0 auto;
+  font-weight: 750;
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.catalog-section-heading {
+  margin-top: 2rem;
+}
+
+.product-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.product-image {
+  aspect-ratio: 4 / 3;
+  background: #e8ede6;
+  display: block;
+  overflow: hidden;
+}
+
+.product-image img,
+.product-detail-image img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.product-card-body {
+  padding: 1rem;
+}
+
+.product-card h2 a {
+  text-decoration: none;
+}
+
+.product-meta,
+.product-price {
+  align-items: baseline;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.product-meta strong,
+.product-price {
+  color: var(--accent-dark);
+  font-size: 1.25rem;
+  font-weight: 850;
+}
+
+.product-price {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.product-price span,
+.product-meta span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.farm-name {
+  color: var(--accent-dark);
+  font-weight: 750;
+}
+
+.availability {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.availability.unavailable {
+  color: #8f493f;
+}
+
+.product-detail {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 0.85fr);
+  min-height: calc(100vh - 74px);
+}
+
+.product-detail-image {
+  background: #e8ede6;
+  min-height: 520px;
+}
+
+.product-detail-copy {
+  align-self: center;
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+.low-grid {
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 720px) {
   .site-header {
     align-items: flex-start;
@@ -345,6 +478,14 @@ td span {
 
   .row-heading {
     flex-direction: column;
+  }
+
+  .product-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .product-detail-image {
+    min-height: 320px;
   }
 
   h1 {

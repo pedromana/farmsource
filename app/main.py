@@ -7,8 +7,10 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, get_settings
 from app.database import init_db
-from app.routes import admin, health, pages
+from app.database import SessionLocal
+from app.routes import admin, customer, health, pages
 from app.services.logging import configure_logging
+from app.services.seed import seed_sample_catalog
 
 
 settings = get_settings()
@@ -19,6 +21,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db()
+    with SessionLocal() as db:
+        seed_sample_catalog(db)
     logger.info("Farmsource started", extra={"app_env": settings.app_env})
     yield
 
@@ -38,4 +42,5 @@ app.mount(
 
 app.include_router(health.router)
 app.include_router(admin.router)
+app.include_router(customer.router)
 app.include_router(pages.router)

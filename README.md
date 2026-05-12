@@ -11,6 +11,10 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Generic source management at `/admin/sources`
 - Producer CSV import at `/admin/imports`
 - Producer review, filtering, qualification, editing, and Excel export at `/admin/producers`
+- Product catalog management at `/admin/products`
+- Category management at `/admin/categories`
+- Delivery-window availability at `/admin/availability`
+- Customer catalog at `/customer/catalog`
 - Driver mobile-friendly shell at `/driver`
 - Landing page at `/`
 - Health check at `/health`
@@ -20,6 +24,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Dockerfile and `docker-compose.yml`
 - pandas and openpyxl dependencies for later Excel export work
 - Rule-based ordering readiness classification for ecommerce, CSA, platform stores, contact-only pages, social media, and unknown destinations
+- Curated v1 product catalog with simple delivery-window inventory
 
 ## Project structure
 
@@ -149,6 +154,56 @@ Imported and edited producers are classified with rule-based logic. Destination 
 - `unknown`
 
 Social media destinations are not qualified. Platform indicators currently include Shopify, Square, Barn2Door, Harvie, GrownBy, Local Line, WooCommerce, GrazeCart, Farmigo, Stripe, and PayPal.
+
+## Product Catalog
+
+Phase 3 adds a curated product catalog foundation for weekly produce offerings, seasonal boxes, selected farm products, and add-ons. It is intentionally not designed as a large grocery SKU system.
+
+Catalog tables:
+
+- `product_categories`: curated categories such as Produce Boxes, Vegetables, Fruits, Seasonal Bundles, Herbs, Add-ons, Dairy, Eggs, Bakery, and Pantry
+- `products`: products connected to imported producers and optional categories
+- `product_availability`: simple delivery-window availability with `available_quantity`, `reserved_quantity`, and `status`
+- `product_images`: image URL records for product media
+- `delivery_windows`: active scheduled delivery windows used for customer availability
+
+Products appear available to customers only when:
+
+- `products.active = true`
+- `products.delivery_eligible = true`
+- availability exists for the active delivery window
+- availability status is `active`
+- `available_quantity > reserved_quantity`
+
+Admin catalog pages:
+
+- `/admin/products`
+- `/admin/products/new`
+- `/admin/products/{id}`
+- `/admin/categories`
+- `/admin/availability`
+
+Customer catalog pages:
+
+- `/customer/catalog`
+- `/customer/product/{id}`
+- `/customer/category/{id}`
+
+## Sample Catalog Data
+
+Startup seeds sample categories, one sample producer, one active Seattle delivery window, and a few products when the product table is empty. This makes a fresh local or Docker setup immediately reviewable.
+
+## Inventory Scope
+
+Inventory is deliberately simple for v1:
+
+- available quantity
+- reserved quantity
+- active/inactive/sold-out status
+- delivery-window-based availability
+- low inventory view/export
+
+Future phases can add subscriptions, recurring weekly boxes, producer self-service, dynamic pricing, advanced inventory, multiple regions, and richer delivery planning without replacing the v1 catalog structure.
 
 ## Docker
 
