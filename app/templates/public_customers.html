@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% from "_public_forms.html" import waitlist_form, success_banner %}
+{% block content %}
+<section class="public-page-hero"><p class="eyebrow">For customers</p><h1>Fresh local produce with scheduled delivery.</h1><p>Join the Seattle pilot for curated weekly produce, seasonal boxes, and selected local farm products.</p></section>
+<section class="public-section two-column"><div><h2>Why join</h2><ul><li>Fresh produce from local producers</li><li>Curated weekly offerings</li><li>Neighborhood delivery windows</li><li>Support for regional farms</li></ul></div><div>{{ success_banner(submitted, "Thanks. You are on the Farmsource customer waitlist.") }}{{ waitlist_form("customer", "/for-customers") }}</div></section>
+{% endblock %}

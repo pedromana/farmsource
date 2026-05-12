@@ -13,10 +13,12 @@ from app.models import (
     Customer,
     DeliveryWindow,
     Driver,
+    DriverInterest,
     DriverPayout,
     ImportRun,
     Order,
     Producer,
+    ProducerInterest,
     Product,
     ProductAvailability,
     ProductCategory,
@@ -24,13 +26,14 @@ from app.models import (
     Route,
     RouteStop,
     Source,
+    WaitlistSignup,
 )
 from app.services.auth import hash_password, require_admin
 from app.services.catalog import LOW_INVENTORY_THRESHOLD, low_inventory_availability
 from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
 from app.services.delivery import assign_route_to_driver, ensure_route_payout, order_summary, refresh_route_estimates, route_driver_suggestions, route_progress, sync_stop_from_order
-from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_payouts_to_excel, drivers_to_excel, orders_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel
+from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_interests_to_excel, driver_payouts_to_excel, drivers_to_excel, orders_to_excel, producer_interests_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel, waitlist_to_excel
 
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -132,6 +135,12 @@ def list_drivers(request: Request, db: Annotated[Session, Depends(get_db)]):
     return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": None, "payouts": payouts})
 
 
+@router.get("/drivers/interests")
+def admin_driver_interests(request: Request, db: Annotated[Session, Depends(get_db)]):
+    interests = db.scalars(select(DriverInterest).order_by(DriverInterest.created_at.desc())).all()
+    return templates.TemplateResponse("admin_driver_interests.html", {"request": request, "interests": interests})
+
+
 @router.get("/drivers/{driver_id}")
 def edit_driver(driver_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
     driver = db.get(Driver, driver_id)
@@ -161,6 +170,21 @@ async def save_driver(request: Request, db: Annotated[Session, Depends(get_db)],
     db.add(driver)
     db.commit()
     return RedirectResponse("/admin/drivers", status_code=303)
+
+
+@router.get("/waitlist")
+def admin_waitlist(request: Request, db: Annotated[Session, Depends(get_db)], signup_type: str | None = None):
+    query = select(WaitlistSignup)
+    if signup_type:
+        query = query.where(WaitlistSignup.signup_type == signup_type)
+    signups = db.scalars(query.order_by(WaitlistSignup.created_at.desc())).all()
+    return templates.TemplateResponse("admin_waitlist.html", {"request": request, "signups": signups, "signup_type": signup_type or ""})
+
+
+@router.get("/producers/interests")
+def admin_producer_interests(request: Request, db: Annotated[Session, Depends(get_db)]):
+    interests = db.scalars(select(ProducerInterest).order_by(ProducerInterest.created_at.desc())).all()
+    return templates.TemplateResponse("admin_producer_interests.html", {"request": request, "interests": interests})
 
 
 @router.get("/delivery-windows")
@@ -392,6 +416,9 @@ def export_operational_data(export_type: str, db: Annotated[Session, Depends(get
         "delivery-windows": lambda: delivery_windows_to_excel(db),
         "customers": lambda: customers_to_excel(db),
         "drivers": lambda: drivers_to_excel(db),
+        "waitlist": lambda: waitlist_to_excel(db),
+        "producer-interests": lambda: producer_interests_to_excel(db),
+        "driver-interests": lambda: driver_interests_to_excel(db),
     }
     if export_type not in exporters:
         raise HTTPException(status_code=404, detail="Export not found")

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Waitlist | Farmsource Admin{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading"><div><p class="eyebrow">Launch leads</p><h1>Waitlist signups</h1></div><a class="button" href="/admin/exports/waitlist">Export waitlist</a></div>
+  <form class="filter-bar compact-filter" method="get" action="/admin/waitlist">
+    <select name="signup_type"><option value="">All types</option>{% for type in ['customer','producer','driver'] %}<option value="{{ type }}" {% if signup_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select>
+    <button>Filter</button>
+  </form>
+  <div class="table-wrap"><table><thead><tr><th>Type</th><th>Name</th><th>Email</th><th>Location</th><th>Source</th><th>Notes</th><th>Created</th></tr></thead><tbody>
+  {% for signup in signups %}
+    <tr><td>{{ signup.signup_type }}</td><td>{{ signup.first_name }} {{ signup.last_name or "" }}</td><td>{{ signup.email }}<br><span>{{ signup.phone or "" }}</span></td><td>{{ signup.city or "" }}, {{ signup.state or "" }} {{ signup.zip_code or "" }}</td><td>{{ signup.source_page or "" }}</td><td>{{ signup.notes or "" }}</td><td>{{ signup.created_at }}</td></tr>
+  {% else %}
+    <tr><td colspan="7">No waitlist signups yet.</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

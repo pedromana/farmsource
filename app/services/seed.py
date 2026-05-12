@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, DriverPayout, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source
+from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, Order, OrderItem, Producer, ProducerInterest, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source, WaitlistSignup
 from app.services.auth import hash_password
 from app.services.delivery import ensure_route_payout, refresh_route_estimates, sync_stop_from_order
 
@@ -27,6 +27,7 @@ def seed_sample_catalog(db: Session) -> None:
     _ensure_admin_user(db)
     if db.scalar(select(Product.id).limit(1)):
         _ensure_window_fields(db)
+        _ensure_sample_public_leads(db)
         _ensure_sample_customer_order(db)
         _ensure_sample_operations(db)
         return
@@ -166,6 +167,7 @@ def seed_sample_catalog(db: Session) -> None:
         )
 
     db.commit()
+    _ensure_sample_public_leads(db)
     _ensure_sample_customer_order(db)
     _ensure_sample_operations(db)
 
@@ -253,6 +255,52 @@ def _ensure_sample_customer_order(db: Session) -> None:
     if availability:
         availability.reserved_quantity += 1
     window.current_order_count += 1
+    db.commit()
+
+
+def _ensure_sample_public_leads(db: Session) -> None:
+    if not db.scalars(select(WaitlistSignup).where(WaitlistSignup.email == "pilot.customer@example.com")).first():
+        db.add(
+            WaitlistSignup(
+                signup_type="customer",
+                first_name="Pilot",
+                last_name="Customer",
+                email="pilot.customer@example.com",
+                city="Seattle",
+                state="WA",
+                zip_code="98103",
+                notes="Interested in weekly produce boxes.",
+                source_page="/waitlist",
+            )
+        )
+    if not db.scalars(select(ProducerInterest).where(ProducerInterest.email == "grower@example.com")).first():
+        db.add(
+            ProducerInterest(
+                business_name="Sample Valley Farm",
+                contact_name="Sample Grower",
+                email="grower@example.com",
+                city="Seattle",
+                state="WA",
+                products="greens, carrots, herbs",
+                delivery_capability="Can aggregate weekly orders for pickup.",
+                online_ordering="No",
+                notes="Sample producer lead.",
+            )
+        )
+    if not db.scalars(select(DriverInterest).where(DriverInterest.email == "route.driver.lead@example.com")).first():
+        db.add(
+            DriverInterest(
+                first_name="Route",
+                last_name="Driver",
+                email="route.driver.lead@example.com",
+                city="Seattle",
+                state="WA",
+                vehicle_type="SUV",
+                availability_notes="Weekday evenings.",
+                territory_preference="North Seattle",
+                notes="Sample driver lead.",
+            )
+        )
     db.commit()
 
 

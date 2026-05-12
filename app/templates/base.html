@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#2f6f4e">
-    <title>{% block title %}Farmsource{% endblock %}</title>
+    <title>{% block title %}{{ seo_title | default("Farmsource") }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ meta_description | default('Farmsource connects Seattle customers with local producers through scheduled neighborhood produce delivery routes.') }}{% endblock %}">
+    <meta property="og:title" content="{{ og_title | default(seo_title | default('Farmsource')) }}">
+    <meta property="og:description" content="{{ og_description | default(meta_description | default('Fresh local produce through scheduled neighborhood delivery routes.')) }}">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="stylesheet" href="/static/css/styles.css">
   </head>
@@ -12,8 +17,13 @@
     <header class="site-header">
       <a class="brand" href="/">Farmsource</a>
       <nav aria-label="Primary navigation">
-        <a href="/customer">Customer</a>
-        <a href="/customer/catalog">Catalog</a>
+        <a href="/how-it-works">How it works</a>
+        <a href="/for-customers">Customers</a>
+        <a href="/for-producers">Producers</a>
+        <a href="/for-drivers">Drivers</a>
+        <a href="/waitlist">Waitlist</a>
+        <a href="/faq">FAQ</a>
+        <a href="/customer/catalog">Shop</a>
         <a class="cart-icon-link" href="/customer/cart" aria-label="Cart">
           <span class="cart-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false">
@@ -30,13 +40,7 @@
           <a href="/customer/cart">View cart</a>
         </div>
         <a href="/admin">Admin</a>
-        <a href="/admin/sources">Sources</a>
-        <a href="/admin/producers">Producers</a>
-        <a href="/admin/products">Products</a>
-        <a href="/admin/orders">Orders</a>
-        <a href="/admin/routes">Routes</a>
-        <a href="/driver">Driver</a>
-        <a href="/admin/logout">Logout</a>
+        <a href="/driver">Driver app</a>
       </nav>
     </header>
     <main>

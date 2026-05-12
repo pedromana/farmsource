@@ -4,7 +4,7 @@ import pandas as pd
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from app.models import Customer, DeliveryWindow, Driver, DriverPayout, Order, Producer, Product, ProductAvailability, Route, RouteStop
+from app.models import Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, Order, Producer, ProducerInterest, Product, ProductAvailability, Route, RouteStop, WaitlistSignup
 from app.services.delivery import order_summary, route_progress
 
 
@@ -334,4 +334,74 @@ def delivery_windows_to_excel(db: Session) -> BytesIO:
             for window in windows
         ],
         "delivery_windows",
+    )
+
+
+def waitlist_to_excel(db: Session) -> BytesIO:
+    rows = db.scalars(select(WaitlistSignup).order_by(WaitlistSignup.created_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "signup_type": row.signup_type,
+                "first_name": row.first_name,
+                "last_name": row.last_name,
+                "email": row.email,
+                "phone": row.phone,
+                "city": row.city,
+                "state": row.state,
+                "zip_code": row.zip_code,
+                "source_page": row.source_page,
+                "notes": row.notes,
+                "created_at": row.created_at,
+            }
+            for row in rows
+        ],
+        "waitlist",
+    )
+
+
+def producer_interests_to_excel(db: Session) -> BytesIO:
+    rows = db.scalars(select(ProducerInterest).order_by(ProducerInterest.created_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "business_name": row.business_name,
+                "contact_name": row.contact_name,
+                "email": row.email,
+                "phone": row.phone,
+                "website_url": row.website_url,
+                "city": row.city,
+                "state": row.state,
+                "products": row.products,
+                "delivery_capability": row.delivery_capability,
+                "online_ordering": row.online_ordering,
+                "notes": row.notes,
+                "created_at": row.created_at,
+            }
+            for row in rows
+        ],
+        "producer_interests",
+    )
+
+
+def driver_interests_to_excel(db: Session) -> BytesIO:
+    rows = db.scalars(select(DriverInterest).order_by(DriverInterest.created_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "first_name": row.first_name,
+                "last_name": row.last_name,
+                "email": row.email,
+                "phone": row.phone,
+                "city": row.city,
+                "state": row.state,
+                "vehicle_type": row.vehicle_type,
+                "availability_notes": row.availability_notes,
+                "territory_preference": row.territory_preference,
+                "notes": row.notes,
+                "created_at": row.created_at,
+            }
+            for row in rows
+        ],
+        "driver_interests",
     )

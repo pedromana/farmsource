@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% from "_public_forms.html" import waitlist_form, producer_form, driver_form, success_banner %}
+{% block content %}
+<section class="public-page-hero"><p class="eyebrow">Seattle pilot</p><h1>Join the Farmsource launch list.</h1><p>Tell us how you want to participate in the Seattle pilot.</p></section>
+<section class="public-section"><div class="public-grid"><article><h3>Customer waitlist</h3>{{ success_banner(submitted == "waitlist", "Thanks. Your signup was saved.") }}{{ waitlist_form("customer", "/waitlist") }}</article><article><h3>Producer interest</h3>{{ producer_form() }}</article><article><h3>Driver interest</h3>{{ driver_form() }}</article></div></section>
+{% endblock %}

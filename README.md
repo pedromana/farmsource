@@ -17,6 +17,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Admin operations dashboard at `/admin/dashboard`
 - Admin order, customer, driver, route, delivery-window, and export management
 - Scheduled route planning and mobile-friendly driver delivery workflow
+- Public marketing website, waitlist, and onboarding forms for the Seattle pilot
 - Customer catalog at `/customer/catalog`
 - Customer cart and checkout at `/customer/cart` and `/customer/checkout`
 - Stripe Checkout redirect flow with local no-key simulation for development
@@ -33,6 +34,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Customer ordering flow with cart, scheduled delivery windows, Stripe-hosted payment, and order status pages
 - Simple session-based admin login for v1 operations
 - Driver route execution app with assigned routes, stop details, status updates, and payout estimates
+- Public lead collection for customers, producers, drivers, and contact inquiries
 
 ## Project structure
 
@@ -423,6 +425,42 @@ When a stop is marked delivered, the stop status changes to `delivered`, the ord
 The payout model is intentionally simple: base route pay plus route bonus plus optional tip placeholder. No payroll integration or automatic payouts are included in v1.
 
 Future delivery expansion can add GPS tracking, route optimization, driver notifications, customer tracking, proof photo uploads, native mobile wrapping, navigation integrations, driver onboarding, and automated payouts.
+
+## Public Website And Onboarding
+
+Phase 7 adds the public-facing Farmsource website for the Seattle pilot. This is separate from the customer ordering app and focuses on awareness, trust, onboarding, and lead collection.
+
+Public pages:
+
+- `/`
+- `/how-it-works`
+- `/for-customers`
+- `/for-producers`
+- `/for-drivers`
+- `/about`
+- `/waitlist`
+- `/contact`
+- `/faq`
+
+Lead tables:
+
+- `waitlist_signups`: customer, producer, and driver waitlist signups
+- `producer_interests`: producer onboarding interest submissions
+- `driver_interests`: driver onboarding interest submissions
+- `contact_messages`: simple contact form submissions
+
+Onboarding flows:
+
+1. Customers join the Seattle pilot waitlist from `/waitlist` or `/for-customers`.
+2. Producers submit business and product information from `/for-producers`.
+3. Drivers submit territory, vehicle, and availability information from `/for-drivers`.
+4. General inquiries are saved from `/contact`.
+5. Admin reviews submissions from `/admin/waitlist`, `/admin/producers/interests`, and `/admin/drivers/interests`.
+6. Admin exports lead lists from `/admin/exports/waitlist`, `/admin/exports/producer-interests`, and `/admin/exports/driver-interests`.
+
+The public pages include SEO-friendly page titles, meta descriptions, Open Graph placeholders, semantic page structure, local Seattle pilot messaging, and placeholders for Instagram, producer spotlights, featured farms, and seasonal produce highlights.
+
+Future marketing expansion can add SEO content/blog posts, producer profiles, native app download pages, referrals, promo codes, marketing integrations, automated onboarding, and richer local landing pages by neighborhood or region.
 
 ## Docker
 

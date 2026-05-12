@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Producer Interest | Farmsource Admin{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading"><div><p class="eyebrow">Launch leads</p><h1>Producer interest</h1></div><a class="button" href="/admin/exports/producer-interests">Export producers</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Business</th><th>Contact</th><th>Location</th><th>Products</th><th>Delivery</th><th>Online</th><th>Notes</th></tr></thead><tbody>
+  {% for item in interests %}
+    <tr><td>{{ item.business_name }}<br><span>{{ item.website_url or "" }}</span></td><td>{{ item.contact_name }}<br>{{ item.email }}<br><span>{{ item.phone or "" }}</span></td><td>{{ item.city or "" }}, {{ item.state or "" }}</td><td>{{ item.products or "" }}</td><td>{{ item.delivery_capability or "" }}</td><td>{{ item.online_ordering or "" }}</td><td>{{ item.notes or "" }}</td></tr>
+  {% else %}
+    <tr><td colspan="7">No producer interest submissions yet.</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

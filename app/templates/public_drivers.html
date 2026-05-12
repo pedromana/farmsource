@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% from "_public_forms.html" import driver_form, success_banner %}
+{% block content %}
+<section class="public-page-hero"><p class="eyebrow">For drivers</p><h1>Predictable local delivery routes.</h1><p>Farmsource routes are pre-planned neighborhood clusters with guaranteed route pay and a community-focused delivery model.</p></section>
+<section class="public-section two-column"><div><h2>Driver benefits</h2><ul><li>Scheduled routes instead of live dispatch</li><li>Neighborhood delivery clusters</li><li>Guaranteed route pay</li><li>Simple mobile-friendly route app</li></ul></div><div>{{ success_banner(submitted, "Thanks. We received your driver interest form.") }}{{ driver_form() }}</div></section>
+{% endblock %}

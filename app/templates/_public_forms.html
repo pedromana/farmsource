@@ -1,0 +1,54 @@
+{% macro success_banner(submitted, label) -%}
+  {% if submitted %}
+    <div class="success-banner">{{ label }}</div>
+  {% endif %}
+{%- endmacro %}
+
+{% macro waitlist_form(signup_type='customer', source_page='/waitlist') -%}
+<form class="public-form" method="post" action="/waitlist">
+  <input type="hidden" name="signup_type" value="{{ signup_type }}">
+  <input type="hidden" name="source_page" value="{{ source_page }}">
+  <label>First name<input name="first_name" required></label>
+  <label>Last name<input name="last_name"></label>
+  <label>Email<input name="email" type="email" required></label>
+  <label>Phone<input name="phone"></label>
+  <label>City<input name="city" value="Seattle"></label>
+  <label>State<input name="state" value="WA"></label>
+  <label>ZIP<input name="zip_code"></label>
+  <label class="full">Notes<textarea name="notes" placeholder="Neighborhood, household size, preferred produce, or questions"></textarea></label>
+  <button class="primary full">Join waitlist</button>
+</form>
+{%- endmacro %}
+
+{% macro producer_form() -%}
+<form class="public-form" method="post" action="/producer-interest">
+  <label>Business name<input name="business_name" required></label>
+  <label>Contact name<input name="contact_name" required></label>
+  <label>Email<input name="email" type="email" required></label>
+  <label>Phone<input name="phone"></label>
+  <label>Website<input name="website_url"></label>
+  <label>City<input name="city"></label>
+  <label>State<input name="state" value="WA"></label>
+  <label>Online ordering<select name="online_ordering"><option value="">Select</option><option>Yes</option><option>No</option><option>In progress</option></select></label>
+  <label class="full">Products<textarea name="products" placeholder="Vegetables, fruit, eggs, dairy, pantry items"></textarea></label>
+  <label class="full">Delivery capability<textarea name="delivery_capability" placeholder="Can you aggregate orders, deliver to a hub, or need pickup?"></textarea></label>
+  <label class="full">Notes<textarea name="notes"></textarea></label>
+  <button class="primary full">Submit producer interest</button>
+</form>
+{%- endmacro %}
+
+{% macro driver_form() -%}
+<form class="public-form" method="post" action="/driver-interest">
+  <label>First name<input name="first_name" required></label>
+  <label>Last name<input name="last_name"></label>
+  <label>Email<input name="email" type="email" required></label>
+  <label>Phone<input name="phone"></label>
+  <label>City<input name="city" value="Seattle"></label>
+  <label>State<input name="state" value="WA"></label>
+  <label>Vehicle type<input name="vehicle_type" placeholder="Car, SUV, van"></label>
+  <label>Preferred territory<input name="territory_preference" placeholder="Seattle, Ballard, Capitol Hill"></label>
+  <label class="full">Availability<textarea name="availability_notes" placeholder="Days, windows, and route preferences"></textarea></label>
+  <label class="full">Notes<textarea name="notes"></textarea></label>
+  <button class="primary full">Submit driver interest</button>
+</form>
+{%- endmacro %}

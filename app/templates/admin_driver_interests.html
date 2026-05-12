@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Driver Interest | Farmsource Admin{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading"><div><p class="eyebrow">Launch leads</p><h1>Driver interest</h1></div><a class="button" href="/admin/exports/driver-interests">Export drivers</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Vehicle</th><th>Territory</th><th>Availability</th><th>Notes</th></tr></thead><tbody>
+  {% for item in interests %}
+    <tr><td>{{ item.first_name }} {{ item.last_name or "" }}</td><td>{{ item.email }}<br><span>{{ item.phone or "" }}</span></td><td>{{ item.city or "" }}, {{ item.state or "" }}</td><td>{{ item.vehicle_type or "" }}</td><td>{{ item.territory_preference or "" }}</td><td>{{ item.availability_notes or "" }}</td><td>{{ item.notes or "" }}</td></tr>
+  {% else %}
+    <tr><td colspan="7">No driver interest submissions yet.</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

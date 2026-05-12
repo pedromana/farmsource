@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% from "_public_forms.html" import success_banner %}
+{% block content %}
+<section class="public-page-hero"><p class="eyebrow">Contact</p><h1>Contact Farmsource.</h1><p>Questions about the Seattle pilot, producer onboarding, customer waitlist, or route delivery?</p></section>
+<section class="public-section narrow-public">{{ success_banner(submitted, "Thanks. Your message was saved.") }}<form class="public-form" method="post" action="/contact"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label class="full">Subject<input name="subject"></label><label class="full">Message<textarea name="message" required></textarea></label><button class="primary full">Send message</button></form></section>
+{% endblock %}
