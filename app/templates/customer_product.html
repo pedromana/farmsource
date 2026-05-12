@@ -13,10 +13,10 @@
     <div class="product-price">${{ "%.2f"|format(product.price) }} <span>/ {{ product.unit }}</span></div>
     {% if availability %}
       <p class="availability">{{ remaining_inventory(availability) }} available for {{ delivery_window.name if delivery_window else "current delivery" }}</p>
-      <form method="post" action="/customer/cart/add" class="quantity-form">
+      <form method="post" action="/customer/cart/add" class="quantity-form" data-product-name="{{ product.name }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <label>Quantity <input type="number" name="quantity" min="1" max="{{ remaining_inventory(availability) }}" value="1"></label>
-        <button class="primary" type="submit">Add to cart</button>
+        <button class="primary add-cart-button" type="submit">Add to cart</button>
       </form>
     {% else %}
       <p class="availability unavailable">Currently unavailable for the active delivery window.</p>

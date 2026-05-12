@@ -166,9 +166,33 @@ button {
   cursor: pointer;
 }
 
-.button.primary {
+.button.primary,
+button.primary {
   border-color: var(--accent);
   background: var(--accent);
+  color: #fff;
+}
+
+.add-cart-button {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 120ms ease;
+}
+
+.add-cart-button:hover:not(:disabled) {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  transform: translateY(-1px);
+}
+
+.add-cart-button.is-adding {
+  background: #d99a28;
+  border-color: #d99a28;
+  color: #1d2a24;
+  cursor: wait;
+}
+
+.add-cart-button.is-added {
+  background: #1d7f5c;
+  border-color: #1d7f5c;
   color: #fff;
 }
 

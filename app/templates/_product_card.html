@@ -14,10 +14,10 @@
     {% set current_availability = current_availability_for_product(product, delivery_window) %}
     {% if current_availability %}
       <p class="availability">{{ remaining_inventory(current_availability) }} available for {{ delivery_window.name if delivery_window else "current delivery" }}</p>
-      <form method="post" action="/customer/cart/add" class="inline-cart-form">
+      <form method="post" action="/customer/cart/add" class="inline-cart-form" data-product-name="{{ product.name }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <input type="hidden" name="quantity" value="1">
-        <button class="primary" type="submit">Add to cart</button>
+        <button class="primary add-cart-button" type="submit">Add to cart</button>
       </form>
     {% else %}
       <p class="availability unavailable">Currently unavailable</p>

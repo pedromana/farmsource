@@ -3,9 +3,12 @@ from fastapi.testclient import TestClient
 from app.database import SessionLocal
 from app.main import app
 from app.models import DeliveryWindow, Order, Product
+from app.config import get_settings
 
 
-def test_customer_cart_checkout_local_payment_flow() -> None:
+def test_customer_cart_checkout_local_payment_flow(monkeypatch) -> None:
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "")
+    get_settings.cache_clear()
     with TestClient(app) as client:
         with SessionLocal() as db:
             product = db.query(Product).filter(Product.active.is_(True)).first()
@@ -59,6 +62,7 @@ def test_customer_cart_checkout_local_payment_flow() -> None:
         assert order is not None
         assert order.payment_status == "paid"
         assert order.order_status == "confirmed"
+    get_settings.cache_clear()
 
 
 def test_order_lookup_page_loads() -> None:

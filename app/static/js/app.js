@@ -22,11 +22,16 @@ async function refreshCartBadge() {
   setCartBadge(cart.count);
 }
 
-function showCartReadyDialog() {
+function showCartReadyDialog(productName) {
   const dialog = document.querySelector("[data-cart-dialog]");
-  if (!dialog || localStorage.getItem("farmsourceCartDialogSeen") === "true") return;
+  if (!dialog) return;
+  const title = dialog.querySelector("[data-cart-dialog-title]");
+  if (title) {
+    title.textContent = productName ? `${productName} added to the cart.` : "Item added to your cart.";
+  }
   localStorage.setItem("farmsourceCartDialogSeen", "true");
   if (typeof dialog.showModal === "function") {
+    if (dialog.open) dialog.close();
     dialog.showModal();
   }
 }
@@ -68,11 +73,34 @@ document.addEventListener("submit", async (event) => {
   const addForm = event.target.closest(".inline-cart-form, .quantity-form");
   if (!addForm) return;
   event.preventDefault();
+  const button = addForm.querySelector(".add-cart-button, button[type='submit']");
+  const originalText = button?.textContent || "Add to cart";
+  if (button) {
+    button.disabled = true;
+    button.classList.remove("is-added");
+    button.classList.add("is-adding");
+    button.textContent = "Adding...";
+  }
   try {
     const cart = await submitCartForm(addForm);
     setCartBadge(cart.count);
-    showCartReadyDialog();
+    if (button) {
+      button.classList.remove("is-adding");
+      button.classList.add("is-added");
+      button.textContent = "Added";
+      window.setTimeout(() => {
+        button.classList.remove("is-added");
+        button.disabled = false;
+        button.textContent = originalText;
+      }, 1400);
+    }
+    showCartReadyDialog(addForm.dataset.productName);
   } catch (error) {
+    if (button) {
+      button.classList.remove("is-adding", "is-added");
+      button.disabled = false;
+      button.textContent = originalText;
+    }
     alert("Unable to add this item to cart.");
   }
 });
