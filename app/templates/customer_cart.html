@@ -9,29 +9,27 @@
   {% if cart.items %}
     <div class="cart-list">
       {% for item in cart.items %}
-      <article class="cart-row">
-        <div>
+      <article class="cart-row" data-cart-row data-item-id="{{ item.id }}">
+        <div class="cart-item-main">
           <h2>{{ item.product.name }}</h2>
           <p>${{ "%.2f"|format(item.product.price) }} / {{ item.product.unit }}</p>
         </div>
-        <form method="post" action="/customer/cart/update" class="cart-qty">
+        <form method="post" action="/customer/cart/update" class="cart-qty" data-cart-quantity-form>
           <input type="hidden" name="item_id" value="{{ item.id }}">
-          <input type="number" name="quantity" min="0" value="{{ item.quantity }}">
-          <button type="submit">Update</button>
+          <button type="button" data-qty-step="-1" aria-label="Decrease quantity">-</button>
+          <input type="number" name="quantity" min="0" value="{{ item.quantity }}" inputmode="numeric" aria-label="Quantity">
+          <button type="button" data-qty-step="1" aria-label="Increase quantity">+</button>
         </form>
-        <form method="post" action="/customer/cart/remove">
-          <input type="hidden" name="item_id" value="{{ item.id }}">
-          <button type="submit">Remove</button>
-        </form>
+        <div class="cart-line-total" data-line-total>${{ "%.2f"|format(item.quantity * item.product.price) }}</div>
       </article>
       {% endfor %}
     </div>
     <div class="summary-card">
       <dl class="summary-list">
-        <div><dt>Subtotal</dt><dd>${{ "%.2f"|format(totals.subtotal) }}</dd></div>
-        <div><dt>Delivery</dt><dd>${{ "%.2f"|format(totals.delivery_fee) }}</dd></div>
-        <div><dt>Taxes</dt><dd>${{ "%.2f"|format(totals.taxes) }}</dd></div>
-        <div><dt>Total</dt><dd>${{ "%.2f"|format(totals.total) }}</dd></div>
+        <div><dt>Subtotal</dt><dd data-cart-subtotal>${{ "%.2f"|format(totals.subtotal) }}</dd></div>
+        <div><dt>Delivery</dt><dd data-cart-delivery>${{ "%.2f"|format(totals.delivery_fee) }}</dd></div>
+        <div><dt>Taxes</dt><dd data-cart-taxes>${{ "%.2f"|format(totals.taxes) }}</dd></div>
+        <div><dt>Total</dt><dd data-cart-total>${{ "%.2f"|format(totals.total) }}</dd></div>
       </dl>
     </div>
     <div class="actions">

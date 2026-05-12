@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -134,7 +134,19 @@ def add_cart_item(
         add_to_cart(db, cart, product_id, quantity)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    response = RedirectResponse("/customer/cart", status_code=303)
+    db.expire(cart, ["items"])
+    if _wants_json(request):
+        response = JSONResponse(_cart_payload(cart))
+    else:
+        response = RedirectResponse(request.headers.get("referer") or "/customer/catalog", status_code=303)
+    response.set_cookie("farmsource_cart", cart.session_id, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
+    return response
+
+
+@router.get("/cart/summary")
+def cart_summary(request: Request, db: Annotated[Session, Depends(get_db)]):
+    cart = get_or_create_cart(db, request.cookies.get("farmsource_cart"))
+    response = JSONResponse(_cart_payload(cart))
     response.set_cookie("farmsource_cart", cart.session_id, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax")
     return response
 
@@ -152,11 +164,15 @@ def cart_page(request: Request, db: Annotated[Session, Depends(get_db)]):
 
 @router.post("/cart/update")
 def update_cart(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     item_id: Annotated[int, Form()],
     quantity: Annotated[int, Form()],
 ):
     update_cart_item(db, item_id, quantity)
+    if _wants_json(request):
+        cart = get_or_create_cart(db, request.cookies.get("farmsource_cart"))
+        return JSONResponse(_cart_payload(cart))
     return RedirectResponse("/customer/cart", status_code=303)
 
 
@@ -309,3 +325,28 @@ def _required(value, label: str) -> str:
     if not value:
         raise HTTPException(status_code=400, detail=f"{label} is required")
     return value
+
+
+def _wants_json(request: Request) -> bool:
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _cart_payload(cart) -> dict:
+    totals = calculate_cart_totals(cart)
+    return {
+        "count": cart_item_count(cart),
+        "subtotal": totals.subtotal,
+        "delivery_fee": totals.delivery_fee,
+        "taxes": totals.taxes,
+        "total": totals.total,
+        "items": [
+            {
+                "id": item.id,
+                "product_id": item.product_id,
+                "quantity": item.quantity,
+                "unit_price": item.product.price,
+                "total_price": round(item.quantity * item.product.price, 2),
+            }
+            for item in cart.items
+        ],
+    }

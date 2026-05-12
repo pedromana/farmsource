@@ -65,3 +65,29 @@ def test_order_lookup_page_loads() -> None:
     with TestClient(app) as client:
         response = client.get("/customer/orders?email=sample.customer@example.com")
         assert response.status_code == 200
+
+
+def test_ajax_cart_add_and_update_returns_live_totals() -> None:
+    with TestClient(app) as client:
+        with SessionLocal() as db:
+            product = db.query(Product).filter(Product.active.is_(True)).first()
+            assert product is not None
+            product_id = product.id
+
+        add_response = client.post(
+            "/customer/cart/add",
+            data={"product_id": product_id, "quantity": 1},
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        )
+        assert add_response.status_code == 200
+        payload = add_response.json()
+        assert payload["count"] >= 1
+        item_id = payload["items"][0]["id"]
+
+        update_response = client.post(
+            "/customer/cart/update",
+            data={"item_id": item_id, "quantity": 2},
+            headers={"X-Requested-With": "XMLHttpRequest"},
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["count"] >= 2
