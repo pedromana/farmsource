@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Sources | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Sources</h1>
+      <p>Generic source records for CSV imports and future connectors.</p>
+    </div>
+    <a class="button primary" href="/admin/sources/new">Add source</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Region</th><th>State</th><th>Enabled</th><th></th></tr></thead>
+      <tbody>
+      {% for source in sources %}
+        <tr>
+          <td>{{ source.source_name }}</td>
+          <td>{{ source.source_type or "" }}</td>
+          <td>{{ source.region or "" }}</td>
+          <td>{{ source.state or "" }}</td>
+          <td>{{ "Yes" if source.enabled else "No" }}</td>
+          <td><a href="/admin/sources/{{ source.id }}/edit">Edit</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6">No sources yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

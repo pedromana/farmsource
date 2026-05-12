@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Edit Producer | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading">
+    <p class="eyebrow">Admin</p>
+    <h1>Edit producer</h1>
+    <p>{{ producer.classification_reason or "" }}</p>
+  </div>
+  <form class="form-grid" method="post" action="/admin/producers/{{ producer.id }}">
+    <label>Source
+      <select name="source_id">
+        <option value="">No source</option>
+        {% for source in sources %}
+          <option value="{{ source.id }}" {% if producer.source_id == source.id %}selected{% endif %}>{{ source.source_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Producer name<input name="producer_name" required value="{{ producer.producer_name or '' }}"></label>
+    <label>Business name<input name="business_name" value="{{ producer.business_name or '' }}"></label>
+    <label>Website URL<input name="website_url" value="{{ producer.website_url or '' }}"></label>
+    <label>Online order URL<input name="online_order_url" value="{{ producer.online_order_url or '' }}"></label>
+    <label>Source listing URL<input name="source_listing_url" value="{{ producer.source_listing_url or '' }}"></label>
+    <label>City<input name="city" value="{{ producer.city or '' }}"></label>
+    <label>County<input name="county" value="{{ producer.county or '' }}"></label>
+    <label>State<input name="state" value="{{ producer.state or '' }}"></label>
+    <label>Zip code<input name="zip_code" value="{{ producer.zip_code or '' }}"></label>
+    <label>Producer type<input name="producer_type" value="{{ producer.producer_type or '' }}"></label>
+    <label>Contact email<input name="contact_email" value="{{ producer.contact_email or '' }}"></label>
+    <label>Contact phone<input name="contact_phone" value="{{ producer.contact_phone or '' }}"></label>
+    <label class="check-row"><input name="delivery_available" type="checkbox" {% if producer.delivery_available %}checked{% endif %}> Delivery available</label>
+    <label class="check-row"><input name="pickup_available" type="checkbox" {% if producer.pickup_available %}checked{% endif %}> Pickup available</label>
+    <label class="check-row"><input name="qualified" type="checkbox" {% if producer.qualified %}checked{% endif %}> Qualified</label>
+    <label class="full">Products<textarea name="products">{{ producer.products or '' }}</textarea></label>
+    <label class="full">Notes<textarea name="notes">{{ producer.notes or '' }}</textarea></label>
+    <div class="summary-card full">
+      <h2>Classification</h2>
+      <p>Destination: {{ producer.destination_type }} | Platform: {{ producer.platform_detected or "None" }} | Confidence: {{ "%.2f"|format(producer.confidence_score) }}</p>
+    </div>
+    <div class="actions full">
+      <button class="primary" type="submit">Save producer</button>
+      <a class="button" href="/admin/producers">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

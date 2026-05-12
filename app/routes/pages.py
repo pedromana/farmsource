@@ -14,11 +14,6 @@ def landing_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("landing.html", {"request": request})
 
 
-@router.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("admin.html", {"request": request})
-
-
 @router.get("/customer", response_class=HTMLResponse)
 def customer_app(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("customer.html", {"request": request})

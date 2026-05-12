@@ -5,14 +5,17 @@
   <div class="page-heading">
     <p class="eyebrow">Operations</p>
     <h1>Admin dashboard</h1>
+    <p>Manage generic producer sources, imported producer records, classification status, and exports.</p>
+  </div>
+  <div class="stat-grid">
+    <article><span>Sources</span><strong>{{ source_count }}</strong></article>
+    <article><span>Producers</span><strong>{{ producer_count }}</strong></article>
+    <article><span>Qualified</span><strong>{{ qualified_count }}</strong></article>
   </div>
   <div class="dashboard-grid">
-    <article><h2>Producers</h2><p>Onboarding and source records will live here.</p></article>
-    <article><h2>Products</h2><p>Catalog, pricing, and availability will live here.</p></article>
-    <article><h2>Orders</h2><p>Customer order workflow will live here.</p></article>
-    <article><h2>Routes</h2><p>Scheduled delivery route planning will live here.</p></article>
-    <article><h2>Drivers</h2><p>Driver assignment and route history will live here.</p></article>
-    <article><h2>Exports</h2><p>Excel exports will be added in a later phase.</p></article>
+    <article><h2>Sources</h2><p>Register CSV files, directories, marketplaces, and future connectors.</p><a class="button" href="/admin/sources">Manage sources</a></article>
+    <article><h2>CSV import</h2><p>Upload flexible producer lists and classify ordering readiness.</p><a class="button" href="/admin/imports">Import CSV</a></article>
+    <article><h2>Producers</h2><p>Review, filter, edit, qualify, and export producer records.</p><a class="button" href="/admin/producers">View producers</a></article>
   </div>
 </section>
 {% endblock %}

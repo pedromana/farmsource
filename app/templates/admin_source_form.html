@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Source | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace narrow">
+  <div class="page-heading">
+    <p class="eyebrow">Admin</p>
+    <h1>{{ "Edit source" if source else "Add source" }}</h1>
+  </div>
+  <form class="form-grid" method="post" action="{{ '/admin/sources/' ~ source.id if source else '/admin/sources' }}">
+    <label>Source name<input name="source_name" required value="{{ source.source_name if source else '' }}"></label>
+    <label>Source type<input name="source_type" placeholder="CSV, directory, marketplace, CSA directory" value="{{ source.source_type if source else '' }}"></label>
+    <label>Source URL<input name="source_url" type="url" value="{{ source.source_url if source else '' }}"></label>
+    <label>Region<input name="region" value="{{ source.region if source else '' }}"></label>
+    <label>State<input name="state" value="{{ source.state if source else '' }}"></label>
+    <label class="check-row"><input name="enabled" type="checkbox" {% if not source or source.enabled %}checked{% endif %}> Enabled</label>
+    <label class="full">Notes<textarea name="notes">{{ source.notes if source else '' }}</textarea></label>
+    <div class="actions full">
+      <button class="primary" type="submit">Save source</button>
+      <a class="button" href="/admin/sources">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

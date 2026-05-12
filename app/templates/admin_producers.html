@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Producers | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Producers</h1>
+      <p>Review imported producers, classify ordering readiness, and export results.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/imports">Import CSV</a>
+      <a class="button primary" href="/admin/producers/export?source_id={{ filters.source_id or '' }}&city={{ filters.city }}&state={{ filters.state }}&product={{ filters.product }}&online_ordering_status={{ filters.online_ordering_status }}">Export filtered</a>
+      <a class="button" href="/admin/producers/export?qualified_only=true">Export qualified</a>
+    </div>
+  </div>
+  <form class="filter-bar" method="get" action="/admin/producers">
+    <select name="source_id">
+      <option value="">All sources</option>
+      {% for source in sources %}
+        <option value="{{ source.id }}" {% if filters.source_id == source.id %}selected{% endif %}>{{ source.source_name }}</option>
+      {% endfor %}
+    </select>
+    <input name="city" placeholder="City" value="{{ filters.city }}">
+    <input name="state" placeholder="State" value="{{ filters.state }}">
+    <input name="product" placeholder="Product" value="{{ filters.product }}">
+    <select name="online_ordering_status">
+      <option value="">Any status</option>
+      <option value="confirmed" {% if filters.online_ordering_status == 'confirmed' %}selected{% endif %}>Online confirmed</option>
+      <option value="not_confirmed" {% if filters.online_ordering_status == 'not_confirmed' %}selected{% endif %}>Not confirmed</option>
+      <option value="qualified" {% if filters.online_ordering_status == 'qualified' %}selected{% endif %}>Qualified</option>
+      <option value="not_qualified" {% if filters.online_ordering_status == 'not_qualified' %}selected{% endif %}>Not qualified</option>
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Producer</th><th>City</th><th>Products</th><th>Destination</th><th>Platform</th><th>Online</th><th>Qualified</th><th></th></tr></thead>
+      <tbody>
+      {% for producer in producers %}
+        <tr>
+          <td><strong>{{ producer.producer_name }}</strong><br><span>{{ producer.website_url or producer.online_order_url or "" }}</span></td>
+          <td>{{ producer.city or "" }} {{ producer.state or "" }}</td>
+          <td>{{ producer.products or "" }}</td>
+          <td>{{ producer.destination_type }}</td>
+          <td>{{ producer.platform_detected or "" }}</td>
+          <td>{{ "Yes" if producer.online_ordering_confirmed else "No" }}</td>
+          <td>
+            <form method="post" action="/admin/producers/{{ producer.id }}/qualification">
+              <input type="hidden" name="qualified" value="{{ 'false' if producer.qualified else 'true' }}">
+              <button type="submit">{{ "Qualified" if producer.qualified else "Not qualified" }}</button>
+            </form>
+          </td>
+          <td><a href="/admin/producers/{{ producer.id }}/edit">Edit</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">No producers found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

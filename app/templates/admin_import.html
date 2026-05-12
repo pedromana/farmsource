@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Import Producers | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace">
+  <div class="page-heading">
+    <p class="eyebrow">Admin</p>
+    <h1>Import producer CSV</h1>
+    <p>Upload a flexible CSV with producer names, websites, ordering links, location, products, and contact fields.</p>
+  </div>
+  <form class="form-grid panel" method="post" action="/admin/imports" enctype="multipart/form-data">
+    <label>Source
+      <select name="source_id">
+        <option value="">No source</option>
+        {% for source in sources %}
+          <option value="{{ source.id }}">{{ source.source_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>CSV file<input name="file" type="file" accept=".csv,text/csv" required></label>
+    <div class="actions full"><button class="primary" type="submit">Import CSV</button></div>
+  </form>
+  {% if import_run %}
+  <article class="summary-card">
+    <h2>Import summary</h2>
+    <dl class="summary-list">
+      <div><dt>File</dt><dd>{{ import_run.filename }}</dd></div>
+      <div><dt>Total rows</dt><dd>{{ import_run.total_rows }}</dd></div>
+      <div><dt>Imported</dt><dd>{{ import_run.imported_rows }}</dd></div>
+      <div><dt>Skipped</dt><dd>{{ import_run.skipped_rows }}</dd></div>
+      <div><dt>Errors</dt><dd>{{ import_run.error_count }}</dd></div>
+    </dl>
+  </article>
+  {% endif %}
+  <h2>Recent imports</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>File</th><th>Total</th><th>Imported</th><th>Skipped</th><th>Errors</th><th>Created</th></tr></thead>
+      <tbody>
+      {% for run in recent_runs %}
+        <tr><td>{{ run.filename }}</td><td>{{ run.total_rows }}</td><td>{{ run.imported_rows }}</td><td>{{ run.skipped_rows }}</td><td>{{ run.error_count }}</td><td>{{ run.created_at }}</td></tr>
+      {% else %}
+        <tr><td colspan="6">No imports yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

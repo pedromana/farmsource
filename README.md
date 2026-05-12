@@ -8,6 +8,9 @@ This repository is intentionally small: it provides the FastAPI app, environment
 
 - Customer-facing shell at `/customer`
 - Admin dashboard shell at `/admin`
+- Generic source management at `/admin/sources`
+- Producer CSV import at `/admin/imports`
+- Producer review, filtering, qualification, editing, and Excel export at `/admin/producers`
 - Driver mobile-friendly shell at `/driver`
 - Landing page at `/`
 - Health check at `/health`
@@ -16,6 +19,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - PWA-friendly static structure with a manifest and service worker placeholder
 - Dockerfile and `docker-compose.yml`
 - pandas and openpyxl dependencies for later Excel export work
+- Rule-based ordering readiness classification for ecommerce, CSA, platform stores, contact-only pages, social media, and unknown destinations
 
 ## Project structure
 
@@ -105,6 +109,46 @@ DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/farmsource
 ```
 
 Alembic migrations can be added when the data model stabilizes beyond the v1 foundation.
+
+## Producer source database
+
+Phase 2 adds generic tables for:
+
+- `sources`: CSV files, farm directories, marketplaces, CSA directories, direct farm sites, or future connectors
+- `producers`: normalized producer records with URLs, location, products, contact fields, destination classification, and qualification status
+- `import_runs`: CSV import summaries
+- `import_error_rows`: skipped or errored CSV row details
+
+The system is source-agnostic. It is not tied to Washington Food & Farm Finder and can later support directories or marketplaces such as LocalHarvest, GrownBy, Market Wagon, Barn2Door-powered farms, Harvie-powered farms, direct farm websites, and manual CSV exports.
+
+## CSV imports
+
+Open `http://127.0.0.1:8000/admin/imports` and upload a CSV. The importer maps common column names automatically, including:
+
+- producer names: `producer_name`, `farm_name`, `farm`, `name`, `vendor`, `supplier`
+- URLs: `website`, `website_url`, `shop_url`, `store_url`, `order_url`, `listing_url`
+- location: `city`, `county`, `state`, `zip`, `postal_code`
+- products: `products`, `offerings`, `categories`, `produce`
+- fulfillment: `delivery`, `pickup`
+- contact: `email`, `phone`
+
+Duplicates are skipped using `website_url`, `online_order_url`, `source_listing_url`, or `producer_name + city + state`.
+
+## Classification
+
+Imported and edited producers are classified with rule-based logic. Destination types include:
+
+- `ecommerce_store`
+- `csa_signup`
+- `subscription_box`
+- `farm_platform_store`
+- `informational_page`
+- `contact_only`
+- `social_media_page`
+- `broken_link`
+- `unknown`
+
+Social media destinations are not qualified. Platform indicators currently include Shopify, Square, Barn2Door, Harvie, GrownBy, Local Line, WooCommerce, GrazeCart, Farmigo, Stripe, and PayPal.
 
 ## Docker
 

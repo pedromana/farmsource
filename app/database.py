@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
@@ -36,6 +36,7 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     import app.models  # noqa: F401
 
+    _migrate_legacy_sqlite_schema()
     Base.metadata.create_all(bind=engine)
 
 
@@ -43,3 +44,19 @@ def check_database() -> bool:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     return True
+
+
+def _migrate_legacy_sqlite_schema() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    inspector = inspect(engine)
+    if "producers" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("producers")}
+    if "producer_name" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS producers"))

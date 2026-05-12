@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, get_settings
 from app.database import init_db
-from app.routes import health, pages
+from app.routes import admin, health, pages
 from app.services.logging import configure_logging
 
 
@@ -37,4 +37,5 @@ app.mount(
 )
 
 app.include_router(health.router)
+app.include_router(admin.router)
 app.include_router(pages.router)
