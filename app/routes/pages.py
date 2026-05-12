@@ -18,7 +18,3 @@ def landing_page(request: Request) -> HTMLResponse:
 def customer_app(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("customer.html", {"request": request})
 
-
-@router.get("/driver", response_class=HTMLResponse)
-def driver_app(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("driver.html", {"request": request})

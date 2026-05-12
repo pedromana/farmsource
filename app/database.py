@@ -75,3 +75,28 @@ def _migrate_legacy_sqlite_schema() -> None:
             for column_name, ddl in delivery_window_additions.items():
                 if column_name not in window_columns:
                     connection.execute(text(f"ALTER TABLE delivery_windows ADD COLUMN {column_name} {ddl}"))
+        if "routes" in table_names:
+            route_columns = {column["name"] for column in inspector.get_columns("routes")}
+            route_additions = {
+                "estimated_stop_count": "INTEGER NOT NULL DEFAULT 0",
+                "estimated_order_count": "INTEGER NOT NULL DEFAULT 0",
+                "route_notes": "TEXT",
+            }
+            for column_name, ddl in route_additions.items():
+                if column_name not in route_columns:
+                    connection.execute(text(f"ALTER TABLE routes ADD COLUMN {column_name} {ddl}"))
+        if "route_stops" in table_names:
+            stop_columns = {column["name"] for column in inspector.get_columns("route_stops")}
+            stop_additions = {
+                "customer_name": "VARCHAR(255)",
+                "address": "VARCHAR(255)",
+                "city": "VARCHAR(120)",
+                "state": "VARCHAR(40)",
+                "zip_code": "VARCHAR(20)",
+                "driver_notes": "TEXT",
+                "failed_reason": "TEXT",
+                "proof_of_delivery_url": "VARCHAR(1000)",
+            }
+            for column_name, ddl in stop_additions.items():
+                if column_name not in stop_columns:
+                    connection.execute(text(f"ALTER TABLE route_stops ADD COLUMN {column_name} {ddl}"))

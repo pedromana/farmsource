@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ route.route_name }} | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">Route detail</p>
+      <h1>{{ route.route_name }}</h1>
+      <p>{{ route.route_status }} | {{ progress.completed }}/{{ progress.total }} stops complete | {{ progress.percent }}%</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/exports/route-manifest">Export manifests</a>
+      <a class="button" href="/driver/route/{{ route.id }}">Driver view</a>
+    </div>
+  </div>
+  <form class="form-grid panel" method="post" action="/admin/routes/{{ route.id }}">
+    <label>Route name<input name="route_name" required value="{{ route.route_name }}"></label>
+    <label>Region<input name="region" value="{{ route.region or '' }}"></label>
+    <label>Delivery window<select name="delivery_window_id"><option value="">No window</option>{% for w in windows %}<option value="{{ w.id }}" {% if route.delivery_window_id == w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select></label>
+    <label>Driver<select name="driver_id"><option value="">No driver</option>{% for d in drivers %}<option value="{{ d.id }}" {% if route.driver_id == d.id %}selected{% endif %}>{{ d.first_name }} {{ d.last_name }}</option>{% endfor %}</select></label>
+    <label>Status<select name="route_status">{% for s in ['planned','assigned','in_progress','completed','cancelled'] %}<option value="{{ s }}" {% if route.route_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+    <label>Start<input name="estimated_start_time" value="{{ route.estimated_start_time or '' }}"></label>
+    <label>End<input name="estimated_end_time" value="{{ route.estimated_end_time or '' }}"></label>
+    <label>Estimated stops<input name="estimated_stop_count" type="number" value="{{ route.estimated_stop_count }}"></label>
+    <label>Estimated orders<input name="estimated_order_count" type="number" value="{{ route.estimated_order_count }}"></label>
+    <label>Base route pay<input name="route_pay" type="number" step="0.01" value="{{ route.route_pay }}"></label>
+    <label>Bonus<input name="route_bonus" type="number" step="0.01" value="{{ route.route_bonus }}"></label>
+    <label class="full">Route notes<textarea name="route_notes">{{ route.route_notes or route.notes or '' }}</textarea></label>
+    <div class="actions full"><button class="primary">Save route</button><a class="button" href="/admin/routes">Back to routes</a></div>
+  </form>
+  <section class="dashboard-grid">
+    <article><h2>Driver</h2><p>{{ route.driver.first_name ~ " " ~ route.driver.last_name if route.driver else "Unassigned" }}<br>{{ route.driver.phone if route.driver else "" }}</p></article>
+    <article><h2>Delivery window</h2><p>{{ route.delivery_window.name if route.delivery_window else "No window" }}<br>{{ route.estimated_start_time or "" }} - {{ route.estimated_end_time or "" }}</p></article>
+    <article><h2>Payout estimate</h2><p>${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}<br>{{ route.payout.payout_status if route.payout else "pending" }}</p></article>
+  </section>
+  <form class="form-grid panel" method="post" action="/admin/routes/{{ route.id }}/stops">
+    <label class="full">Assign order<select name="order_id">{% for order in orders %}<option value="{{ order.id }}">{{ order.order_number }} - {{ order.delivery_address }}</option>{% else %}<option value="">No unassigned orders</option>{% endfor %}</select></label>
+    <div class="actions full"><button>Add stop</button></div>
+  </form>
+  <article class="summary-card">
+    <h2>Stops</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Seq</th><th>Customer</th><th>Address</th><th>Order</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+        <tbody>
+          {% for stop in route.stops %}
+          <tr>
+            <td colspan="7">
+              <form class="route-stop-row" method="post" action="/admin/routes/{{ route.id }}/stops/{{ stop.id }}">
+                <input name="stop_sequence" type="number" value="{{ stop.stop_sequence }}" aria-label="Stop sequence">
+                <div><strong>{{ stop.customer_name or "" }}</strong><br><span>{{ stop.address or "" }}, {{ stop.city or "" }} {{ stop.zip_code or "" }}</span></div>
+                <div>{{ stop.order.order_number if stop.order else "" }}<br><span>{{ order_summary(stop.order) }}</span></div>
+                <select name="stop_status">{% for s in ['pending','delivered','failed','skipped'] %}<option value="{{ s }}" {% if stop.stop_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+                <input name="delivery_notes" value="{{ stop.delivery_notes or '' }}" aria-label="Delivery notes">
+                <input name="driver_notes" value="{{ stop.driver_notes or '' }}" aria-label="Driver notes">
+                <input name="failed_reason" value="{{ stop.failed_reason or '' }}" aria-label="Failed reason">
+                <button>Save</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7">No stops assigned.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  <form class="form-grid panel" method="post" action="/admin/routes/{{ route.id }}/payout">
+    <h2 class="full">Payout</h2>
+    <label>Tips placeholder<input name="tip_amount" type="number" step="0.01" value="{{ route.payout.tip_amount if route.payout else 0 }}"></label>
+    <label>Status<select name="payout_status">{% for s in ['pending','approved','paid'] %}<option value="{{ s }}" {% if route.payout and route.payout.payout_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+    <label class="full">Payout notes<textarea name="payout_notes">{{ route.payout.payout_notes if route.payout else '' }}</textarea></label>
+    <div class="actions full"><button>Save payout</button></div>
+  </form>
+</section>
+{% endblock %}

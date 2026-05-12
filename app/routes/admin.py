@@ -13,6 +13,7 @@ from app.models import (
     Customer,
     DeliveryWindow,
     Driver,
+    DriverPayout,
     ImportRun,
     Order,
     Producer,
@@ -28,7 +29,8 @@ from app.services.auth import require_admin
 from app.services.catalog import LOW_INVENTORY_THRESHOLD, low_inventory_availability
 from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
-from app.services.exporter import availability_to_excel, customers_to_excel, delivery_windows_to_excel, drivers_to_excel, orders_to_excel, producers_to_excel, products_to_excel, routes_to_excel
+from app.services.delivery import ensure_route_payout, order_summary, refresh_route_estimates, route_progress, sync_stop_from_order
+from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_payouts_to_excel, drivers_to_excel, orders_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel
 
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -102,7 +104,14 @@ async def update_order(order_id: int, request: Request, db: Annotated[Session, D
     order.internal_notes = _optional(form.get("internal_notes"))
     if order.route_id and not db.scalars(select(RouteStop).where(RouteStop.route_id == order.route_id, RouteStop.order_id == order.id)).first():
         max_sequence = db.scalar(select(func.coalesce(func.max(RouteStop.stop_sequence), 0)).where(RouteStop.route_id == order.route_id))
-        db.add(RouteStop(route_id=order.route_id, order_id=order.id, stop_sequence=max_sequence + 1, delivery_notes=order.customer.delivery_notes if order.customer else None))
+        stop = RouteStop(route_id=order.route_id, order_id=order.id, stop_sequence=max_sequence + 1, delivery_notes=order.customer.delivery_notes if order.customer else None)
+        db.add(stop)
+        db.flush()
+        sync_stop_from_order(stop)
+        route = db.get(Route, order.route_id)
+        if route:
+            refresh_route_estimates(route)
+            ensure_route_payout(db, route)
     db.commit()
     return RedirectResponse(f"/admin/orders/{order.id}", status_code=303)
 
@@ -119,14 +128,16 @@ def list_customers(request: Request, db: Annotated[Session, Depends(get_db)], q:
 @router.get("/drivers")
 def list_drivers(request: Request, db: Annotated[Session, Depends(get_db)]):
     drivers = db.scalars(select(Driver).order_by(Driver.last_name, Driver.first_name)).all()
-    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": None})
+    payouts = db.scalars(select(DriverPayout).order_by(DriverPayout.created_at.desc()).limit(25)).all()
+    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": None, "payouts": payouts})
 
 
 @router.get("/drivers/{driver_id}")
 def edit_driver(driver_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
     driver = db.get(Driver, driver_id)
     drivers = db.scalars(select(Driver).order_by(Driver.last_name, Driver.first_name)).all()
-    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": driver})
+    payouts = db.scalars(select(DriverPayout).where(DriverPayout.driver_id == driver_id).order_by(DriverPayout.created_at.desc())).all()
+    return templates.TemplateResponse("admin_drivers.html", {"request": request, "drivers": drivers, "driver": driver, "payouts": payouts})
 
 
 @router.post("/drivers")
@@ -186,19 +197,41 @@ async def save_delivery_window(request: Request, db: Annotated[Session, Depends(
 @router.get("/routes")
 def list_routes(request: Request, db: Annotated[Session, Depends(get_db)]):
     routes = db.scalars(select(Route).order_by(Route.created_at.desc())).all()
+    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "route_progress": route_progress})
+
+
+@router.get("/routes/new")
+def new_route(request: Request, db: Annotated[Session, Depends(get_db)]):
     drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name)).all()
     windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
-    orders = db.scalars(select(Order).where(Order.order_status.in_(["confirmed", "packed", "assigned_to_route"])).order_by(Order.created_at)).all()
-    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "route": None, "drivers": drivers, "windows": windows, "orders": orders})
+    return templates.TemplateResponse("admin_route_form.html", {"request": request, "route": None, "drivers": drivers, "windows": windows})
 
 
 @router.get("/routes/{route_id}")
 def edit_route(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
     route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    for stop in route.stops:
+        sync_stop_from_order(stop)
+    refresh_route_estimates(route)
+    ensure_route_payout(db, route)
+    db.commit()
     drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name)).all()
     windows = db.scalars(select(DeliveryWindow).order_by(DeliveryWindow.delivery_date.desc())).all()
-    orders = db.scalars(select(Order).where(Order.route_id.is_(None)).order_by(Order.created_at)).all()
-    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": [route] if route else [], "route": route, "drivers": drivers, "windows": windows, "orders": orders})
+    orders = db.scalars(select(Order).where(Order.route_id.is_(None), Order.order_status.in_(["confirmed", "packed", "assigned_to_route"])).order_by(Order.created_at)).all()
+    return templates.TemplateResponse(
+        "admin_route_detail.html",
+        {
+            "request": request,
+            "route": route,
+            "drivers": drivers,
+            "windows": windows,
+            "orders": orders,
+            "progress": route_progress(route),
+            "order_summary": order_summary,
+        },
+    )
 
 
 @router.post("/routes")
@@ -215,25 +248,39 @@ async def save_route(request: Request, db: Annotated[Session, Depends(get_db)], 
     route.route_status = str(form.get("route_status") or "planned")
     route.estimated_start_time = _optional(form.get("estimated_start_time"))
     route.estimated_end_time = _optional(form.get("estimated_end_time"))
+    route.estimated_stop_count = _int(form.get("estimated_stop_count"), route.estimated_stop_count or 0)
+    route.estimated_order_count = _int(form.get("estimated_order_count"), route.estimated_order_count or 0)
     route.route_pay = _float(form.get("route_pay"), 0.0)
     route.route_bonus = _float(form.get("route_bonus"), 0.0)
+    route.route_notes = _optional(form.get("route_notes"))
     route.notes = _optional(form.get("notes"))
     db.add(route)
+    db.flush()
+    ensure_route_payout(db, route)
     db.commit()
-    return RedirectResponse("/admin/routes", status_code=303)
+    return RedirectResponse(f"/admin/routes/{route.id}", status_code=303)
 
 
 @router.post("/routes/{route_id}/stops")
 async def add_route_stop(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
     route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
     form = await request.form()
     order_id = _required_int(form.get("order_id"), "order_id")
+    if db.scalars(select(RouteStop).where(RouteStop.route_id == route_id, RouteStop.order_id == order_id)).first():
+        return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
     max_sequence = db.scalar(select(func.coalesce(func.max(RouteStop.stop_sequence), 0)).where(RouteStop.route_id == route_id))
-    db.add(RouteStop(route_id=route_id, order_id=order_id, stop_sequence=max_sequence + 1, stop_status="pending"))
     order = db.get(Order, order_id)
+    stop = RouteStop(route_id=route_id, order_id=order_id, stop_sequence=max_sequence + 1, stop_status="pending")
+    db.add(stop)
+    db.flush()
     if order:
         order.route_id = route_id
         order.order_status = "assigned_to_route"
+        sync_stop_from_order(stop)
+    refresh_route_estimates(route)
+    ensure_route_payout(db, route)
     db.commit()
     return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
 
@@ -246,7 +293,28 @@ async def update_route_stop(route_id: int, stop_id: int, request: Request, db: A
         stop.stop_sequence = _int(form.get("stop_sequence"), stop.stop_sequence)
         stop.stop_status = str(form.get("stop_status") or stop.stop_status)
         stop.delivery_notes = _optional(form.get("delivery_notes"))
+        stop.driver_notes = _optional(form.get("driver_notes"))
+        stop.failed_reason = _optional(form.get("failed_reason"))
+        sync_stop_from_order(stop)
+        if stop.route:
+            refresh_route_estimates(stop.route)
+            ensure_route_payout(db, stop.route)
         db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
+
+
+@router.post("/routes/{route_id}/payout")
+async def update_route_payout(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    form = await request.form()
+    payout = ensure_route_payout(db, route)
+    payout.tip_amount = _float(form.get("tip_amount"), payout.tip_amount or 0.0)
+    payout.payout_status = str(form.get("payout_status") or payout.payout_status)
+    payout.payout_notes = _optional(form.get("payout_notes"))
+    payout.total_pay = round((payout.base_route_pay or 0.0) + (payout.bonus_pay or 0.0) + (payout.tip_amount or 0.0), 2)
+    db.commit()
     return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
 
 
@@ -260,6 +328,11 @@ def export_operational_data(export_type: str, db: Annotated[Session, Depends(get
     exporters = {
         "orders": lambda: orders_to_excel(db),
         "routes": lambda: routes_to_excel(db),
+        "route-manifest": lambda: route_manifest_to_excel(db),
+        "delivery-summary": lambda: delivery_summary_to_excel(db),
+        "driver-payouts": lambda: driver_payouts_to_excel(db),
+        "completed-routes": lambda: completed_routes_to_excel(db),
+        "failed-deliveries": lambda: delivery_summary_to_excel(db, "failed"),
         "producers": lambda: producers_to_excel(db),
         "products": lambda: products_to_excel(db),
         "delivery-windows": lambda: delivery_windows_to_excel(db),

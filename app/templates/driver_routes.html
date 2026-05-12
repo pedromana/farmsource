@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}My Routes | Farmsource{% endblock %}
+{% block content %}
+<section class="driver-app">
+  <div class="driver-topbar">
+    <div><p class="eyebrow">Signed in</p><h1>{{ driver.first_name }} {{ driver.last_name }}</h1></div>
+    <a href="/driver/logout">Logout</a>
+  </div>
+  <div class="driver-list">
+    {% for route in routes %}
+      {% set progress = route_progress(route) %}
+      <article class="driver-card">
+        <div class="route-card-head">
+          <div><h2>{{ route.route_name }}</h2><p>{{ route.delivery_window.name if route.delivery_window else "Scheduled route" }}</p></div>
+          <span class="status-pill">{{ route.route_status }}</span>
+        </div>
+        <div class="driver-progress"><span style="width: {{ progress.percent }}%"></span></div>
+        <p>{{ progress.completed }}/{{ progress.total }} stops complete | Pay estimate ${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}</p>
+        <a class="button primary" href="/driver/route/{{ route.id }}">Open route</a>
+      </article>
+    {% else %}
+      <article class="driver-card"><h2>No routes assigned</h2><p>Check with operations for your next scheduled route.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

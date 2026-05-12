@@ -4,8 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source
+from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, DriverPayout, Order, OrderItem, Producer, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source
 from app.services.auth import hash_password
+from app.services.delivery import ensure_route_payout, refresh_route_estimates, sync_stop_from_order
 
 
 CATEGORY_NAMES = [
@@ -282,8 +283,11 @@ def _ensure_sample_operations(db: Session) -> None:
             route_status="planned",
             estimated_start_time="4:00 PM",
             estimated_end_time="7:00 PM",
+            estimated_stop_count=0,
+            estimated_order_count=0,
             route_pay=80.0,
             route_bonus=0.0,
+            route_notes="Sample route for launch operations.",
             notes="Sample route for launch operations.",
         )
         db.add(route)
@@ -297,7 +301,7 @@ def _ensure_sample_operations(db: Session) -> None:
             continue
         order.route_id = route.id
         db.add(
-            RouteStop(
+            stop := RouteStop(
                 route_id=route.id,
                 order_id=order.id,
                 stop_sequence=next_sequence,
@@ -305,5 +309,13 @@ def _ensure_sample_operations(db: Session) -> None:
                 delivery_notes=order.customer.delivery_notes if order.customer else None,
             )
         )
+        db.flush()
+        sync_stop_from_order(stop)
         next_sequence += 1
+    for stop in route.stops:
+        sync_stop_from_order(stop)
+    refresh_route_estimates(route)
+    payout = db.scalars(select(DriverPayout).where(DriverPayout.route_id == route.id)).first()
+    if not payout:
+        ensure_route_payout(db, route)
     db.commit()

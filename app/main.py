@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import BASE_DIR, get_settings
 from app.database import init_db
 from app.database import SessionLocal
-from app.routes import admin, admin_auth, customer, health, pages, payments
+from app.routes import admin, admin_auth, customer, driver, health, pages, payments
 from app.services.logging import configure_logging
 from app.services.seed import seed_sample_catalog
 
@@ -52,5 +52,6 @@ app.include_router(health.router)
 app.include_router(admin_auth.router)
 app.include_router(admin.router)
 app.include_router(customer.router)
+app.include_router(driver.router)
 app.include_router(payments.router)
 app.include_router(pages.router)

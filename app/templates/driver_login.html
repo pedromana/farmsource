@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Driver Login | Farmsource{% endblock %}
+{% block content %}
+<section class="driver-app">
+  <div class="driver-topbar">
+    <div><p class="eyebrow">Driver login</p><h1>Assigned routes</h1></div>
+  </div>
+  <form class="driver-card driver-form" method="post" action="/driver/login">
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+    <label>Email<input name="email" type="email" required placeholder="driver@example.com"></label>
+    <button class="primary">Sign in</button>
+    <p class="muted">Sample driver: driver@example.com</p>
+  </form>
+</section>
+{% endblock %}

@@ -1,19 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Driver | Farmsource{% endblock %}
 {% block content %}
-<section class="driver-shell">
-  <div class="page-heading">
-    <p class="eyebrow">Mobile route view</p>
-    <h1>Driver app</h1>
-    <p>Assigned route and stop workflow shell.</p>
+<section class="driver-app">
+  <div class="driver-topbar">
+    <div><p class="eyebrow">Driver app</p><h1>Farmsource delivery</h1></div>
   </div>
-  <div class="route-card">
-    <h2>Today&apos;s route</h2>
-    <ol>
-      <li>Route assignment placeholder</li>
-      <li>Stop list placeholder</li>
-      <li>Delivery status placeholder</li>
-    </ol>
-  </div>
+  <article class="driver-card">
+    <h2>Route workflow</h2>
+    <p>Sign in to view assigned scheduled routes, complete stops, and review route payout estimates.</p>
+    <a class="button primary" href="/driver/login">Driver login</a>
+  </article>
 </section>
 {% endblock %}

@@ -666,6 +666,162 @@ td span {
   gap: 0.75rem;
 }
 
+.status-pill {
+  background: #edf4ef;
+  border: 1px solid #c9d8cf;
+  border-radius: 999px;
+  color: var(--accent-dark);
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 850;
+  padding: 0.2rem 0.55rem;
+}
+
+.route-stop-row {
+  align-items: center;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 64px minmax(170px, 1.2fr) minmax(160px, 1fr) 130px minmax(140px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) auto;
+}
+
+.route-stop-row input,
+.route-stop-row select {
+  min-width: 0;
+}
+
+.driver-app {
+  background: #f3f6f0;
+  min-height: calc(100vh - 70px);
+  padding: 1rem;
+}
+
+.driver-topbar {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 auto 1rem;
+  max-width: 720px;
+}
+
+.driver-topbar h1 {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.driver-card,
+.driver-list,
+.driver-stop-list {
+  margin: 0 auto 1rem;
+  max-width: 720px;
+}
+
+.driver-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.driver-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.driver-form input,
+.driver-form select,
+.driver-form textarea {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font: inherit;
+  min-height: 48px;
+  padding: 0.65rem;
+  width: 100%;
+}
+
+.driver-actions {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+.route-card-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.driver-progress {
+  background: #dfe8e1;
+  border-radius: 999px;
+  height: 10px;
+  margin: 0.8rem 0;
+  overflow: hidden;
+}
+
+.driver-progress span {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.driver-stop-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.driver-stop {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 42px 1fr auto;
+  min-height: 74px;
+  padding: 0.8rem;
+  text-decoration: none;
+}
+
+.driver-stop strong {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.driver-stop em {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.driver-stop.delivered {
+  border-color: #97c7a9;
+}
+
+.driver-stop.failed {
+  border-color: #cf9a8f;
+}
+
+.muted,
+.form-error {
+  color: var(--muted);
+}
+
+.form-error {
+  color: #9a3b28;
+  font-weight: 800;
+}
+
 @media (max-width: 720px) {
   .site-header {
     align-items: flex-start;
@@ -703,6 +859,19 @@ td span {
 
   .cart-line-total {
     text-align: left;
+  }
+
+  .route-stop-row {
+    grid-template-columns: 1fr;
+  }
+
+  .driver-app {
+    min-height: 100vh;
+    padding: 0.8rem;
+  }
+
+  .driver-topbar {
+    align-items: flex-start;
   }
 
   h1 {

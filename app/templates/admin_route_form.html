@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}New Route | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading">
+    <p class="eyebrow">Route planning</p>
+    <h1>{{ "Edit route" if route else "Create route" }}</h1>
+  </div>
+  <form class="form-grid panel" method="post" action="{{ '/admin/routes/' ~ route.id if route else '/admin/routes' }}">
+    <label>Route name<input name="route_name" required value="{{ route.route_name if route else '' }}"></label>
+    <label>Region<input name="region" value="{{ route.region if route else 'Seattle' }}"></label>
+    <label>Delivery window<select name="delivery_window_id"><option value="">No window</option>{% for w in windows %}<option value="{{ w.id }}" {% if route and route.delivery_window_id == w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select></label>
+    <label>Driver<select name="driver_id"><option value="">No driver</option>{% for d in drivers %}<option value="{{ d.id }}" {% if route and route.driver_id == d.id %}selected{% endif %}>{{ d.first_name }} {{ d.last_name }}</option>{% endfor %}</select></label>
+    <label>Status<select name="route_status">{% for s in ['planned','assigned','in_progress','completed','cancelled'] %}<option value="{{ s }}" {% if route and route.route_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+    <label>Start<input name="estimated_start_time" value="{{ route.estimated_start_time if route else '4:00 PM' }}"></label>
+    <label>End<input name="estimated_end_time" value="{{ route.estimated_end_time if route else '7:00 PM' }}"></label>
+    <label>Estimated stops<input name="estimated_stop_count" type="number" value="{{ route.estimated_stop_count if route else 0 }}"></label>
+    <label>Estimated orders<input name="estimated_order_count" type="number" value="{{ route.estimated_order_count if route else 0 }}"></label>
+    <label>Base route pay<input name="route_pay" type="number" step="0.01" value="{{ route.route_pay if route else 80 }}"></label>
+    <label>Bonus<input name="route_bonus" type="number" step="0.01" value="{{ route.route_bonus if route else 0 }}"></label>
+    <label class="full">Route notes<textarea name="route_notes">{{ route.route_notes if route else '' }}</textarea></label>
+    <div class="actions full"><button class="primary">Save route</button><a class="button" href="/admin/routes">Cancel</a></div>
+  </form>
+</section>
+{% endblock %}

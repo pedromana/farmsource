@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ route.route_name }} | Farmsource{% endblock %}
+{% block content %}
+<section class="driver-app">
+  <div class="driver-topbar">
+    <div><p class="eyebrow">Route</p><h1>{{ route.route_name }}</h1><p>{{ route.estimated_start_time or "" }} - {{ route.estimated_end_time or "" }}</p></div>
+    <a href="/driver/routes">Routes</a>
+  </div>
+  <article class="driver-card">
+    <div class="route-card-head"><h2>{{ route.route_status }}</h2><strong>{{ progress.completed }}/{{ progress.total }}</strong></div>
+    <div class="driver-progress"><span style="width: {{ progress.percent }}%"></span></div>
+    <p>{{ route.route_notes or route.notes or "" }}</p>
+    <p>Pay estimate: ${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}</p>
+  </article>
+  <div class="driver-stop-list">
+    {% for stop in route.stops %}
+      <a class="driver-stop {{ stop.stop_status }}" href="/driver/stop/{{ stop.id }}">
+        <strong>{{ stop.stop_sequence }}</strong>
+        <span><b>{{ stop.customer_name or "Customer" }}</b><br>{{ stop.address or "" }}<br><small>{{ order_summary(stop.order) }}</small></span>
+        <em>{{ stop.stop_status }}</em>
+      </a>
+    {% else %}
+      <article class="driver-card"><h2>No stops assigned</h2></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

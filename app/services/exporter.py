@@ -4,7 +4,8 @@ import pandas as pd
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from app.models import Customer, DeliveryWindow, Driver, Order, Producer, Product, ProductAvailability, Route, RouteStop
+from app.models import Customer, DeliveryWindow, Driver, DriverPayout, Order, Producer, Product, ProductAvailability, Route, RouteStop
+from app.services.delivery import order_summary, route_progress
 
 
 EXPORT_COLUMNS = [
@@ -160,8 +161,10 @@ def routes_to_excel(db: Session) -> BytesIO:
                 "region": route.region,
                 "delivery_window": route.delivery_window.name if route.delivery_window else "",
                 "stop_count": len(route.stops),
+                "progress_percent": route_progress(route)["percent"],
                 "route_pay": route.route_pay,
                 "route_bonus": route.route_bonus,
+                "route_notes": route.route_notes or route.notes,
             }
         )
         for stop in route.stops:
@@ -173,11 +176,107 @@ def routes_to_excel(db: Session) -> BytesIO:
                     "region": "",
                     "delivery_window": "",
                     "stop_count": stop.stop_sequence,
+                    "progress_percent": "",
                     "route_pay": stop.order.order_number if stop.order else "",
-                    "route_bonus": stop.order.delivery_address if stop.order else "",
+                    "route_bonus": stop.address or (stop.order.delivery_address if stop.order else ""),
+                    "route_notes": stop.delivery_notes,
                 }
             )
     return rows_to_excel(rows, "routes")
+
+
+def route_manifest_to_excel(db: Session, route_id: int | None = None) -> BytesIO:
+    query = select(Route).order_by(Route.created_at.desc())
+    if route_id:
+        query = query.where(Route.id == route_id)
+    routes = db.scalars(query).all()
+    rows = []
+    for route in routes:
+        for stop in route.stops:
+            rows.append(
+                {
+                    "route": route.route_name,
+                    "delivery_window": route.delivery_window.name if route.delivery_window else "",
+                    "driver": f"{route.driver.first_name} {route.driver.last_name}" if route.driver else "",
+                    "stop_sequence": stop.stop_sequence,
+                    "status": stop.stop_status,
+                    "customer": stop.customer_name or "",
+                    "address": stop.address or "",
+                    "city": stop.city or "",
+                    "state": stop.state or "",
+                    "zip": stop.zip_code or "",
+                    "order": stop.order.order_number if stop.order else "",
+                    "order_summary": order_summary(stop.order),
+                    "delivery_notes": stop.delivery_notes,
+                    "driver_notes": stop.driver_notes,
+                    "failed_reason": stop.failed_reason,
+                }
+            )
+    return rows_to_excel(rows, "route_manifest")
+
+
+def delivery_summary_to_excel(db: Session, status: str | None = None) -> BytesIO:
+    query = select(RouteStop).order_by(RouteStop.stop_status, RouteStop.stop_sequence)
+    if status:
+        query = query.where(RouteStop.stop_status == status)
+    stops = db.scalars(query).all()
+    return rows_to_excel(
+        [
+            {
+                "route": stop.route.route_name if stop.route else "",
+                "driver": f"{stop.route.driver.first_name} {stop.route.driver.last_name}" if stop.route and stop.route.driver else "",
+                "stop_sequence": stop.stop_sequence,
+                "status": stop.stop_status,
+                "customer": stop.customer_name,
+                "address": stop.address,
+                "order": stop.order.order_number if stop.order else "",
+                "delivered_at": stop.delivered_at,
+                "failed_reason": stop.failed_reason,
+                "driver_notes": stop.driver_notes,
+            }
+            for stop in stops
+        ],
+        "delivery_summary",
+    )
+
+
+def completed_routes_to_excel(db: Session) -> BytesIO:
+    routes = db.scalars(select(Route).where(Route.route_status == "completed").order_by(Route.updated_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "route": route.route_name,
+                "driver": f"{route.driver.first_name} {route.driver.last_name}" if route.driver else "",
+                "delivery_window": route.delivery_window.name if route.delivery_window else "",
+                "stops": len(route.stops),
+                "progress_percent": route_progress(route)["percent"],
+                "route_pay": route.route_pay,
+                "route_bonus": route.route_bonus,
+            }
+            for route in routes
+        ],
+        "completed_routes",
+    )
+
+
+def driver_payouts_to_excel(db: Session) -> BytesIO:
+    payouts = db.scalars(select(DriverPayout).order_by(DriverPayout.created_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "driver": f"{payout.driver.first_name} {payout.driver.last_name}" if payout.driver else "",
+                "route": payout.route.route_name if payout.route else "",
+                "base_route_pay": payout.base_route_pay,
+                "bonus_pay": payout.bonus_pay,
+                "tip_amount": payout.tip_amount,
+                "total_pay": payout.total_pay,
+                "payout_status": payout.payout_status,
+                "payout_notes": payout.payout_notes,
+            }
+            for payout in payouts
+        ],
+        "driver_payouts",
+    )
 
 
 def customers_to_excel(db: Session) -> BytesIO:

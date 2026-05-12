@@ -16,6 +16,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Delivery-window availability at `/admin/availability`
 - Admin operations dashboard at `/admin/dashboard`
 - Admin order, customer, driver, route, delivery-window, and export management
+- Scheduled route planning and mobile-friendly driver delivery workflow
 - Customer catalog at `/customer/catalog`
 - Customer cart and checkout at `/customer/cart` and `/customer/checkout`
 - Stripe Checkout redirect flow with local no-key simulation for development
@@ -31,6 +32,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Curated v1 product catalog with simple delivery-window inventory
 - Customer ordering flow with cart, scheduled delivery windows, Stripe-hosted payment, and order status pages
 - Simple session-based admin login for v1 operations
+- Driver route execution app with assigned routes, stop details, status updates, and payout estimates
 
 ## Project structure
 
@@ -322,6 +324,89 @@ The intended v1 operating workflow is:
 Route statuses are `planned`, `assigned`, `in_progress`, `completed`, and `cancelled`. Stop statuses are `pending`, `delivered`, `failed`, and `skipped`.
 
 This is intentionally simple. Future phases can add richer permissions, producer and driver self-service, route optimization, notifications, analytics, warehouse hubs, and multi-region operations without replacing the current tables.
+
+## Route-Based Delivery
+
+Phase 6 expands the scheduled delivery system. Farmsource remains a pre-planned, route-based operation, not an instant delivery marketplace.
+
+Delivery tables:
+
+- `drivers`: driver profiles, territory, vehicle, active status, and notes
+- `routes`: assigned delivery window, driver, route status, stop/order estimates, route pay, bonus, and notes
+- `route_stops`: stop sequence, customer/address snapshot, delivery notes, driver notes, delivery status, failed reason, and proof URL placeholder
+- `driver_payouts`: base route pay, bonus, tip placeholder, total pay, payout status, and payout notes
+
+Route statuses are:
+
+- `planned`
+- `assigned`
+- `in_progress`
+- `completed`
+- `cancelled`
+
+Stop statuses are:
+
+- `pending`
+- `delivered`
+- `failed`
+- `skipped`
+
+Payout statuses are:
+
+- `pending`
+- `approved`
+- `paid`
+
+## Route Workflow
+
+The v1 operating flow is:
+
+1. Admin creates delivery windows.
+2. Customers place scheduled orders.
+3. Admin creates a route at `/admin/routes/new`.
+4. Admin assigns a delivery window and driver.
+5. Admin opens `/admin/routes/{id}` and assigns orders as route stops.
+6. Admin manually orders stops by editing stop sequence.
+7. Driver opens the mobile web app and completes stops.
+8. Admin reviews route progress, completed stops, failed deliveries, and payout status.
+
+Admin route tools:
+
+- `/admin/routes`
+- `/admin/routes/new`
+- `/admin/routes/{id}`
+- `/admin/drivers`
+- `/admin/drivers/{id}`
+- `/admin/exports/route-manifest`
+- `/admin/exports/delivery-summary`
+- `/admin/exports/driver-payouts`
+- `/admin/exports/completed-routes`
+- `/admin/exports/failed-deliveries`
+
+## Driver Workflow
+
+The driver app is a mobile-first web app that can later be wrapped with Capacitor or a similar tool.
+
+Driver pages:
+
+- `/driver/login`
+- `/driver/routes`
+- `/driver/route/{route_id}`
+- `/driver/stop/{stop_id}`
+
+For local sample data, use:
+
+```text
+driver@example.com
+```
+
+Drivers can view assigned routes, route progress, stops in sequence, delivery instructions, customer phone placeholder, ordered item summaries, and route payout estimate. On each stop, the driver can mark delivered, failed, skipped, add driver notes, add a failed reason, and store a proof-of-delivery URL placeholder.
+
+When a stop is marked delivered, the stop status changes to `delivered`, the order status changes to `delivered`, and `delivered_at` is recorded. When all stops are completed as delivered, failed, or skipped, the route becomes `completed`.
+
+The payout model is intentionally simple: base route pay plus route bonus plus optional tip placeholder. No payroll integration or automatic payouts are included in v1.
+
+Future delivery expansion can add GPS tracking, route optimization, driver notifications, customer tracking, proof photo uploads, native mobile wrapping, navigation integrations, driver onboarding, and automated payouts.
 
 ## Docker
 

@@ -314,6 +314,7 @@ class Driver(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text)
 
     routes: Mapped[list["Route"]] = relationship(back_populates="driver")
+    payouts: Mapped[list["DriverPayout"]] = relationship(back_populates="driver")
 
 
 class Route(Base, TimestampMixin):
@@ -327,13 +328,17 @@ class Route(Base, TimestampMixin):
     route_status: Mapped[str] = mapped_column(String(40), default="planned", nullable=False, index=True)
     estimated_start_time: Mapped[str | None] = mapped_column(String(20))
     estimated_end_time: Mapped[str | None] = mapped_column(String(20))
+    estimated_stop_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    estimated_order_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     route_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     route_bonus: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    route_notes: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 
     delivery_window: Mapped[DeliveryWindow | None] = relationship()
     driver: Mapped[Driver | None] = relationship(back_populates="routes")
     stops: Mapped[list["RouteStop"]] = relationship(back_populates="route", cascade="all, delete-orphan", order_by="RouteStop.stop_sequence")
+    payout: Mapped["DriverPayout | None"] = relationship(back_populates="route", cascade="all, delete-orphan", uselist=False)
 
 
 class RouteStop(Base, TimestampMixin):
@@ -344,8 +349,33 @@ class RouteStop(Base, TimestampMixin):
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False, index=True)
     stop_sequence: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     stop_status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False, index=True)
+    customer_name: Mapped[str | None] = mapped_column(String(255))
+    address: Mapped[str | None] = mapped_column(String(255))
+    city: Mapped[str | None] = mapped_column(String(120))
+    state: Mapped[str | None] = mapped_column(String(40))
+    zip_code: Mapped[str | None] = mapped_column(String(20))
     delivery_notes: Mapped[str | None] = mapped_column(Text)
+    driver_notes: Mapped[str | None] = mapped_column(Text)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failed_reason: Mapped[str | None] = mapped_column(Text)
+    proof_of_delivery_url: Mapped[str | None] = mapped_column(String(1000))
 
     route: Mapped[Route] = relationship(back_populates="stops")
     order: Mapped[Order] = relationship()
+
+
+class DriverPayout(Base, TimestampMixin):
+    __tablename__ = "driver_payouts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    driver_id: Mapped[int | None] = mapped_column(ForeignKey("drivers.id"), index=True)
+    route_id: Mapped[int | None] = mapped_column(ForeignKey("routes.id"), index=True, unique=True)
+    base_route_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    bonus_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    tip_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    total_pay: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    payout_status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False, index=True)
+    payout_notes: Mapped[str | None] = mapped_column(Text)
+
+    driver: Mapped[Driver | None] = relationship(back_populates="payouts")
+    route: Mapped[Route | None] = relationship(back_populates="payout")
