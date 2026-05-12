@@ -25,11 +25,11 @@ from app.models import (
     RouteStop,
     Source,
 )
-from app.services.auth import require_admin
+from app.services.auth import hash_password, require_admin
 from app.services.catalog import LOW_INVENTORY_THRESHOLD, low_inventory_availability
 from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
-from app.services.delivery import ensure_route_payout, order_summary, refresh_route_estimates, route_progress, sync_stop_from_order
+from app.services.delivery import assign_route_to_driver, ensure_route_payout, order_summary, refresh_route_estimates, route_driver_suggestions, route_progress, sync_stop_from_order
 from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_payouts_to_excel, drivers_to_excel, orders_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel
 
 
@@ -153,6 +153,9 @@ async def save_driver(request: Request, db: Annotated[Session, Depends(get_db)],
     driver.phone = _optional(form.get("phone"))
     driver.territory = _optional(form.get("territory"))
     driver.vehicle_type = _optional(form.get("vehicle_type"))
+    password = _optional(form.get("password"))
+    if password:
+        driver.password_hash = hash_password(password)
     driver.active = form.get("active") == "on"
     driver.notes = _optional(form.get("notes"))
     db.add(driver)
@@ -197,7 +200,9 @@ async def save_delivery_window(request: Request, db: Annotated[Session, Depends(
 @router.get("/routes")
 def list_routes(request: Request, db: Annotated[Session, Depends(get_db)]):
     routes = db.scalars(select(Route).order_by(Route.created_at.desc())).all()
-    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "route_progress": route_progress})
+    drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name, Driver.first_name)).all()
+    suggestions = route_driver_suggestions(db, routes)
+    return templates.TemplateResponse("admin_routes.html", {"request": request, "routes": routes, "drivers": drivers, "suggestions": suggestions, "route_progress": route_progress})
 
 
 @router.get("/routes/new")
@@ -230,6 +235,7 @@ def edit_route(route_id: int, request: Request, db: Annotated[Session, Depends(g
             "orders": orders,
             "progress": route_progress(route),
             "order_summary": order_summary,
+            "suggestion": route_driver_suggestions(db, [route]).get(route.id),
         },
     )
 
@@ -259,6 +265,42 @@ async def save_route(request: Request, db: Annotated[Session, Depends(get_db)], 
     ensure_route_payout(db, route)
     db.commit()
     return RedirectResponse(f"/admin/routes/{route.id}", status_code=303)
+
+
+@router.post("/routes/suggestions/accept-all")
+def accept_all_route_suggestions(db: Annotated[Session, Depends(get_db)]):
+    suggestions = route_driver_suggestions(db)
+    for route_id, suggestion in suggestions.items():
+        route = db.get(Route, route_id)
+        best = suggestion.get("best")
+        if route and best:
+            assign_route_to_driver(db, route, best["driver"].id)
+    db.commit()
+    return RedirectResponse("/admin/routes", status_code=303)
+
+
+@router.post("/routes/{route_id}/suggestions/accept")
+def accept_route_suggestion(route_id: int, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    suggestion = route_driver_suggestions(db, [route]).get(route.id)
+    best = suggestion.get("best") if suggestion else None
+    if best:
+        assign_route_to_driver(db, route, best["driver"].id)
+        db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
+
+
+@router.post("/routes/{route_id}/assign-driver")
+async def assign_driver_manually(route_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    route = db.get(Route, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    form = await request.form()
+    assign_route_to_driver(db, route, _optional_int(form.get("driver_id")))
+    db.commit()
+    return RedirectResponse(f"/admin/routes/{route_id}", status_code=303)
 
 
 @router.post("/routes/{route_id}/stops")

@@ -6,7 +6,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import AdminUser
+from app.models import AdminUser, Driver
 
 
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -31,6 +31,13 @@ def authenticate_admin(db: Session, email: str, password: str) -> AdminUser | No
     if not admin or not verify_password(password, admin.password_hash):
         return None
     return admin
+
+
+def authenticate_driver(db: Session, email: str, password: str) -> Driver | None:
+    driver = db.scalars(select(Driver).where(Driver.email == email.strip().lower(), Driver.active.is_(True))).first()
+    if not driver or not driver.password_hash or not verify_password(password, driver.password_hash):
+        return None
+    return driver
 
 
 def require_admin(request: Request) -> int:

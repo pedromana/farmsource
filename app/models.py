@@ -307,6 +307,7 @@ class Driver(Base, TimestampMixin):
     first_name: Mapped[str] = mapped_column(String(120), nullable=False)
     last_name: Mapped[str] = mapped_column(String(120), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(80))
     territory: Mapped[str | None] = mapped_column(String(120), index=True)
     vehicle_type: Mapped[str | None] = mapped_column(String(120))

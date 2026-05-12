@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import BASE_DIR
 from app.database import get_db
 from app.models import Driver, Route, RouteStop
+from app.services.auth import authenticate_driver
 from app.services.delivery import assigned_driver_routes, order_summary, route_progress, update_stop_status
 
 
@@ -47,9 +48,10 @@ def driver_login_page(request: Request):
 async def driver_login(request: Request, db: Annotated[Session, Depends(get_db)]):
     form = await request.form()
     email = str(form.get("email") or "").strip().lower()
-    driver = db.scalars(select(Driver).where(Driver.email == email, Driver.active.is_(True))).first()
+    password = str(form.get("password") or "")
+    driver = authenticate_driver(db, email, password)
     if not driver:
-        return templates.TemplateResponse("driver_login.html", {"request": request, "error": "Active driver not found."}, status_code=400)
+        return templates.TemplateResponse("driver_login.html", {"request": request, "error": "Invalid driver email or password."}, status_code=400)
     request.session["driver_id"] = driver.id
     request.session["driver_email"] = driver.email
     return RedirectResponse("/driver/routes", status_code=303)

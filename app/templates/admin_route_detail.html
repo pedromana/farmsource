@@ -33,6 +33,18 @@
     <article><h2>Delivery window</h2><p>{{ route.delivery_window.name if route.delivery_window else "No window" }}<br>{{ route.estimated_start_time or "" }} - {{ route.estimated_end_time or "" }}</p></article>
     <article><h2>Payout estimate</h2><p>${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}<br>{{ route.payout.payout_status if route.payout else "pending" }}</p></article>
   </section>
+  <article class="summary-card">
+    <h2>Assignment suggestion</h2>
+    {% if suggestion and suggestion.best %}
+      <p><strong>{{ suggestion.best.driver.first_name }} {{ suggestion.best.driver.last_name }}</strong> is suggested for this route.</p>
+      <p>{{ suggestion.best.score }} points | {{ suggestion.best.reason }}</p>
+      <div class="actions">
+        <form method="post" action="/admin/routes/{{ route.id }}/suggestions/accept"><button class="primary">Accept suggestion</button></form>
+      </div>
+    {% else %}
+      <p>No active driver suggestion is available.</p>
+    {% endif %}
+  </article>
   <form class="form-grid panel" method="post" action="/admin/routes/{{ route.id }}/stops">
     <label class="full">Assign order<select name="order_id">{% for order in orders %}<option value="{{ order.id }}">{{ order.order_number }} - {{ order.delivery_address }}</option>{% else %}<option value="">No unassigned orders</option>{% endfor %}</select></label>
     <div class="actions full"><button>Add stop</button></div>

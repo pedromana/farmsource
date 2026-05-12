@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import DriverPayout, Order, Route, RouteStop
+from app.models import Driver, DriverPayout, Order, Route, RouteStop
 
 
 ROUTE_STATUSES = {"planned", "assigned", "in_progress", "completed", "cancelled"}
@@ -106,3 +106,71 @@ def assigned_driver_routes(db: Session, driver_id: int) -> list[Route]:
         .where(Route.driver_id == driver_id)
         .order_by(Route.created_at.desc())
     ).all()
+
+
+def route_driver_suggestions(db: Session, routes: list[Route] | None = None) -> dict[int, dict]:
+    if routes is None:
+        routes = db.scalars(
+            select(Route)
+            .where(Route.route_status.in_(["planned", "assigned"]))
+            .order_by(Route.created_at.desc())
+        ).all()
+    drivers = db.scalars(select(Driver).where(Driver.active.is_(True)).order_by(Driver.last_name, Driver.first_name)).all()
+    active_counts = dict(
+        db.execute(
+            select(Route.driver_id, func.count(Route.id))
+            .where(Route.driver_id.is_not(None), Route.route_status.in_(["planned", "assigned", "in_progress"]))
+            .group_by(Route.driver_id)
+        ).all()
+    )
+    suggestions = {}
+    for route in routes:
+        ranked = sorted(
+            (score_driver_for_route(driver, route, int(active_counts.get(driver.id, 0))) for driver in drivers),
+            key=lambda item: item["score"],
+            reverse=True,
+        )
+        best = ranked[0] if ranked else None
+        suggestions[route.id] = {
+            "route": route,
+            "best": best,
+            "ranked": ranked,
+        }
+    return suggestions
+
+
+def score_driver_for_route(driver: Driver, route: Route, active_route_count: int) -> dict:
+    score = 50
+    reasons = []
+    driver_territory = (driver.territory or "").strip().lower()
+    route_region = (route.region or "").strip().lower()
+    if driver_territory and route_region and driver_territory == route_region:
+        score += 35
+        reasons.append("territory match")
+    elif driver_territory and route_region and (driver_territory in route_region or route_region in driver_territory):
+        score += 20
+        reasons.append("territory overlap")
+    else:
+        reasons.append("available active driver")
+    if route.driver_id == driver.id:
+        score += 10
+        reasons.append("currently assigned")
+    if active_route_count == 0:
+        score += 15
+        reasons.append("no active routes")
+    else:
+        score -= min(active_route_count * 8, 30)
+        reasons.append(f"{active_route_count} active route(s)")
+    return {
+        "driver": driver,
+        "score": max(score, 0),
+        "reason": ", ".join(reasons),
+        "active_route_count": active_route_count,
+    }
+
+
+def assign_route_to_driver(db: Session, route: Route, driver_id: int | None) -> None:
+    route.driver_id = driver_id
+    if driver_id and route.route_status == "planned":
+        route.route_status = "assigned"
+    ensure_route_payout(db, route)

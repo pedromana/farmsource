@@ -689,6 +689,24 @@ td span {
   min-width: 0;
 }
 
+.route-suggestion-bar {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.inline-assign-form {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.inline-assign-form select {
+  min-width: 150px;
+}
+
 .driver-app {
   background: #f3f6f0;
   min-height: calc(100vh - 70px);
@@ -863,6 +881,12 @@ td span {
 
   .route-stop-row {
     grid-template-columns: 1fr;
+  }
+
+  .route-suggestion-bar,
+  .inline-assign-form {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .driver-app {

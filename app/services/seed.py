@@ -263,6 +263,7 @@ def _ensure_sample_operations(db: Session) -> None:
             first_name="Sample",
             last_name="Driver",
             email="driver@example.com",
+            password_hash=hash_password("Driver123!"),
             phone="206-555-0198",
             territory="Seattle",
             vehicle_type="Cargo van",
@@ -271,6 +272,8 @@ def _ensure_sample_operations(db: Session) -> None:
         )
         db.add(driver)
         db.flush()
+    elif not driver.password_hash:
+        driver.password_hash = hash_password("Driver123!")
 
     window = db.scalars(select(DeliveryWindow).where(DeliveryWindow.active.is_(True))).first()
     route = db.scalars(select(Route).where(Route.route_name == "Seattle Pilot Route")).first()

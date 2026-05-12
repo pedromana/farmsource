@@ -8,8 +8,9 @@
   <form class="driver-card driver-form" method="post" action="/driver/login">
     {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
     <label>Email<input name="email" type="email" required placeholder="driver@example.com"></label>
+    <label>Password<input name="password" type="password" required></label>
     <button class="primary">Sign in</button>
-    <p class="muted">Sample driver: driver@example.com</p>
+    <p class="muted">Sample driver: driver@example.com / Driver123!</p>
   </form>
 </section>
 {% endblock %}

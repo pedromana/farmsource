@@ -17,6 +17,7 @@
     <label>First name<input name="first_name" required value="{{ driver.first_name if driver else '' }}"></label>
     <label>Last name<input name="last_name" required value="{{ driver.last_name if driver else '' }}"></label>
     <label>Email<input name="email" value="{{ driver.email if driver else '' }}"></label>
+    <label>Password{% if driver %}<span>Leave blank to keep current password.</span>{% endif %}<input name="password" type="password"></label>
     <label>Phone<input name="phone" value="{{ driver.phone if driver else '' }}"></label>
     <label>Territory<input name="territory" value="{{ driver.territory if driver else 'Seattle' }}"></label>
     <label>Vehicle<input name="vehicle_type" value="{{ driver.vehicle_type if driver else '' }}"></label>

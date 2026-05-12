@@ -383,6 +383,15 @@ Admin route tools:
 - `/admin/exports/completed-routes`
 - `/admin/exports/failed-deliveries`
 
+Route assignment options:
+
+- Manually choose a driver from the route list or route detail page.
+- Review suggested drivers scored by territory/region match and current active route load.
+- Accept one suggested driver for a route.
+- Accept all current route-driver suggestions from the route list.
+
+Suggestions are deliberately advisory. They do not perform live dispatching, GPS matching, or route optimization.
+
 ## Driver Workflow
 
 The driver app is a mobile-first web app that can later be wrapped with Capacitor or a similar tool.
@@ -398,9 +407,12 @@ For local sample data, use:
 
 ```text
 driver@example.com
+Driver123!
 ```
 
 Drivers can view assigned routes, route progress, stops in sequence, delivery instructions, customer phone placeholder, ordered item summaries, and route payout estimate. On each stop, the driver can mark delivered, failed, skipped, add driver notes, add a failed reason, and store a proof-of-delivery URL placeholder.
+
+Driver login is password protected. Admins can set or reset driver passwords from `/admin/drivers`; leaving the password field blank keeps the existing password.
 
 When a stop is marked delivered, the stop status changes to `delivered`, the order status changes to `delivered`, and `delivered_at` is recorded. When all stops are completed as delivered, failed, or skipped, the route becomes `completed`.
 

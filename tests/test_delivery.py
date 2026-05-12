@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.database import SessionLocal
 from app.main import app
-from app.models import Driver, RouteStop
+from app.models import Driver, Route, RouteStop
 
 
 def login_admin(client: TestClient) -> None:
@@ -15,7 +15,7 @@ def login_admin(client: TestClient) -> None:
 
 
 def login_driver(client: TestClient) -> None:
-    response = client.post("/driver/login", data={"email": "driver@example.com"}, follow_redirects=False)
+    response = client.post("/driver/login", data={"email": "driver@example.com", "password": "Driver123!"}, follow_redirects=False)
     assert response.status_code == 303
 
 
@@ -35,8 +35,24 @@ def test_admin_route_and_delivery_exports_load() -> None:
             assert response.status_code == 200
 
 
+def test_admin_route_suggestion_can_be_accepted() -> None:
+    with TestClient(app) as client:
+        login_admin(client)
+        response = client.post("/admin/routes/suggestions/accept-all", follow_redirects=False)
+        assert response.status_code == 303
+
+    with SessionLocal() as db:
+        route = db.query(Route).filter(Route.route_name == "Seattle Pilot Route").first()
+        driver = db.query(Driver).filter(Driver.email == "driver@example.com").first()
+        assert route is not None
+        assert driver is not None
+        assert route.driver_id == driver.id
+
+
 def test_driver_route_workflow_loads_and_updates_stop() -> None:
     with TestClient(app) as client:
+        bad_login = client.post("/driver/login", data={"email": "driver@example.com", "password": "wrong"})
+        assert bad_login.status_code == 400
         login_driver(client)
         routes_response = client.get("/driver/routes")
         assert routes_response.status_code == 200

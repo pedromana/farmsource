@@ -13,23 +13,50 @@
       <a class="button" href="/admin/exports/route-manifest">Export manifest</a>
     </div>
   </div>
+  <form class="panel route-suggestion-bar" method="post" action="/admin/routes/suggestions/accept-all">
+    <div>
+      <h2>Driver suggestions</h2>
+      <p>Suggestions prioritize territory match and lower active route load. Admin can accept all, accept one route, or manually choose a driver.</p>
+    </div>
+    <button class="primary">Accept all suggestions</button>
+  </form>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Route</th><th>Window</th><th>Driver</th><th>Status</th><th>Progress</th><th>Pay</th><th></th></tr></thead>
+      <thead><tr><th>Route</th><th>Window</th><th>Driver</th><th>Suggested driver</th><th>Status</th><th>Progress</th><th>Pay</th><th></th></tr></thead>
       <tbody>
       {% for route in routes %}
         {% set progress = route_progress(route) %}
+        {% set suggestion = suggestions.get(route.id) %}
+        {% set best = suggestion.best if suggestion else None %}
         <tr>
           <td><strong>{{ route.route_name }}</strong><br><span>{{ route.region or "" }}</span></td>
           <td>{{ route.delivery_window.name if route.delivery_window else "No window" }}</td>
-          <td>{{ route.driver.first_name ~ " " ~ route.driver.last_name if route.driver else "Unassigned" }}</td>
+          <td>
+            <form class="inline-assign-form" method="post" action="/admin/routes/{{ route.id }}/assign-driver">
+              <select name="driver_id">
+                <option value="">Unassigned</option>
+                {% for driver in drivers %}
+                  <option value="{{ driver.id }}" {% if route.driver_id == driver.id %}selected{% endif %}>{{ driver.first_name }} {{ driver.last_name }}</option>
+                {% endfor %}
+              </select>
+              <button>Assign</button>
+            </form>
+          </td>
+          <td>
+            {% if best %}
+              <strong>{{ best.driver.first_name }} {{ best.driver.last_name }}</strong><br><span>{{ best.score }} pts | {{ best.reason }}</span>
+              <form method="post" action="/admin/routes/{{ route.id }}/suggestions/accept"><button>Accept</button></form>
+            {% else %}
+              No active driver
+            {% endif %}
+          </td>
           <td><span class="status-pill">{{ route.route_status }}</span></td>
           <td>{{ progress.completed }}/{{ progress.total }} stops<br><span>{{ progress.percent }}%</span></td>
           <td>${{ "%.2f"|format(route.route_pay + route.route_bonus) }}</td>
           <td><a href="/admin/routes/{{ route.id }}">Open</a></td>
         </tr>
       {% else %}
-        <tr><td colspan="7">No routes yet.</td></tr>
+        <tr><td colspan="8">No routes yet.</td></tr>
       {% endfor %}
       </tbody>
     </table>

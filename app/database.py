@@ -100,3 +100,7 @@ def _migrate_legacy_sqlite_schema() -> None:
             for column_name, ddl in stop_additions.items():
                 if column_name not in stop_columns:
                     connection.execute(text(f"ALTER TABLE route_stops ADD COLUMN {column_name} {ddl}"))
+        if "drivers" in table_names:
+            driver_columns = {column["name"] for column in inspector.get_columns("drivers")}
+            if "password_hash" not in driver_columns:
+                connection.execute(text("ALTER TABLE drivers ADD COLUMN password_hash VARCHAR(255)"))
