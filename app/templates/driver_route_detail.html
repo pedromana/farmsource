@@ -2,6 +2,7 @@
 {% block title %}{{ route.route_name }} | Farmsource{% endblock %}
 {% block content %}
 <section class="driver-app">
+  <div class="app-page-bar driver-tabs"><a href="/driver/routes">Routes</a><a href="#stops">Stops</a><a href="/driver/logout">Logout</a></div>
   <div class="driver-topbar">
     <div><p class="eyebrow">Route</p><h1>{{ route.route_name }}</h1><p>{{ route.estimated_start_time or "" }} - {{ route.estimated_end_time or "" }}</p></div>
     <a href="/driver/routes">Routes</a>
@@ -12,13 +13,16 @@
     <p>{{ route.route_notes or route.notes or "" }}</p>
     <p>Pay estimate: ${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}</p>
   </article>
-  <form class="driver-card driver-form" method="post" action="/driver/route/{{ route.id }}/decline">
+  <details class="driver-card">
+    <summary>Decline route</summary>
+    <form class="driver-form" method="post" action="/driver/route/{{ route.id }}/decline">
     <h2>Decline route</h2>
     <p>This will remove the route from your assigned route list and send it back to admin as priority for reassignment.</p>
     <label>Reason optional<textarea name="decline_reason"></textarea></label>
     <button>Decline route</button>
-  </form>
-  <div class="driver-stop-list">
+    </form>
+  </details>
+  <div class="driver-stop-list" id="stops">
     {% for stop in route.stops %}
       <a class="driver-stop {{ stop.stop_status }}" href="/driver/stop/{{ stop.id }}">
         <strong>{{ stop.stop_sequence }}</strong>
@@ -26,7 +30,7 @@
         <em>{{ stop.stop_status }}</em>
       </a>
     {% else %}
-      <article class="driver-card"><h2>No stops assigned</h2></article>
+      <article class="driver-card empty-state"><h2>No stops assigned</h2></article>
     {% endfor %}
   </div>
 </section>

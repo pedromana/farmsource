@@ -2,6 +2,11 @@
 {% block title %}{{ category.name }} | Farmsource{% endblock %}
 {% block content %}
 <section class="workspace wide">
+  <div class="app-page-bar">
+    <a href="/customer/catalog">Shop</a>
+    <a href="/customer/cart">Cart</a>
+    <a href="/customer/orders">Orders</a>
+  </div>
   <div class="page-heading">
     <p class="eyebrow">Category</p>
     <h1>{{ category.name }}</h1>
@@ -16,8 +21,9 @@
     {% for product in products %}
       {% include "_product_card.html" %}
     {% else %}
-      <article><h2>No available products</h2><p>This category has no available products in the active delivery window.</p></article>
+      <article class="empty-state"><h2>No available products</h2><p>This category has no available products in the active delivery window.</p></article>
     {% endfor %}
   </div>
 </section>
+<a class="sticky-cart-cta" href="/customer/cart">View cart <span data-cart-count {% if not cart_count | default(0) %}hidden{% endif %}>{{ cart_count | default(0) }}</span></a>
 {% endblock %}

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -15,16 +15,17 @@ templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 
 
 PUBLIC_META = {
-    "/": ("Farmsource | Seattle Local Produce Delivery", "Fresh local produce directly from regional producers through scheduled neighborhood delivery routes in Seattle."),
-    "/how-it-works": ("How Farmsource Works | Scheduled Farm Delivery", "How Farmsource curates local produce and delivers scheduled neighborhood routes for the Seattle pilot."),
-    "/for-customers": ("For Customers | Farmsource Seattle Produce Waitlist", "Join Farmsource for curated weekly produce, local farm sourcing, and scheduled Seattle-area delivery windows."),
-    "/for-producers": ("For Producers | Sell Through Farmsource", "Reach Seattle-area customers with Farmsource customer aggregation, curated offerings, and route-based delivery coordination."),
-    "/for-drivers": ("For Drivers | Farmsource Route Delivery", "Predictable neighborhood delivery routes, guaranteed route pay, and community-focused work for the Farmsource Seattle pilot."),
+    "/": ("Farmsource | Nationwide Local Produce Delivery", "Fresh local produce directly from regional producers through scheduled neighborhood delivery routes across the United States."),
+    "/how-it-works": ("How Farmsource Works | Scheduled Farm Delivery", "How Farmsource curates local produce and organizes scheduled neighborhood routes for communities nationwide."),
+    "/for-customers": ("For Customers | Farmsource Local Produce Waitlist", "Join Farmsource for curated weekly produce, local farm sourcing, and scheduled regional delivery windows."),
+    "/for-producers": ("For Producers | Sell Through Farmsource", "Reach nearby customers with Farmsource customer aggregation, curated offerings, and route-based delivery coordination."),
+    "/for-drivers": ("For Drivers | Farmsource Route Delivery", "Predictable neighborhood delivery routes, guaranteed route pay, and community-focused work for Farmsource delivery regions."),
     "/about": ("About Farmsource | Local Food Routes", "Farmsource connects local producers, customers, and route drivers through a simple scheduled delivery model."),
-    "/waitlist": ("Join the Farmsource Waitlist | Seattle Pilot", "Join the Farmsource Seattle pilot waitlist as a customer, producer, or driver."),
-    "/contact": ("Contact Farmsource | Seattle Pilot", "Contact Farmsource about local produce delivery, producer onboarding, or driver opportunities."),
-    "/faq": ("Farmsource FAQ | Seattle Produce Delivery", "Answers about Farmsource delivery windows, participating farms, producers, drivers, and Seattle pilot launch plans."),
+    "/waitlist": ("Join the Farmsource Waitlist | Local Produce Delivery", "Join the Farmsource launch waitlist as a customer, producer, or driver in your region."),
+    "/contact": ("Contact Farmsource | Local Produce Delivery", "Contact Farmsource about local produce delivery, producer onboarding, customer waitlists, or driver opportunities."),
+    "/faq": ("Farmsource FAQ | Nationwide Local Produce Delivery", "Answers about Farmsource delivery windows, participating farms, producers, drivers, and regional launch plans."),
 }
+PUBLIC_PATHS = tuple(PUBLIC_META.keys())
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -72,6 +73,23 @@ def faq(request: Request) -> HTMLResponse:
     return _public_template(request, "public_faq.html", "/faq")
 
 
+@router.get("/robots.txt", response_class=PlainTextResponse)
+def robots_txt(request: Request) -> str:
+    base_url = str(request.base_url).rstrip("/")
+    return f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n"
+
+
+@router.get("/sitemap.xml")
+def sitemap_xml(request: Request) -> Response:
+    base_url = str(request.base_url).rstrip("/")
+    urls = "\n".join(
+        f"  <url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>{'1.0' if path == '/' else '0.8'}</priority></url>"
+        for path in PUBLIC_PATHS
+    )
+    content = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}\n</urlset>\n'
+    return Response(content=content, media_type="application/xml")
+
+
 @router.get("/customer", response_class=HTMLResponse)
 def customer_app(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("customer.html", {"request": request})
@@ -103,7 +121,7 @@ def submit_waitlist(
             email=email.strip().lower(),
             phone=_optional(phone),
             city=_optional(city),
-            state=_optional(state) or "WA",
+            state=_optional(state),
             zip_code=_optional(zip_code),
             notes=_optional(notes),
             source_page=_optional(source_page),
@@ -138,7 +156,7 @@ def submit_producer_interest(
             phone=_optional(phone),
             website_url=_optional(website_url),
             city=_optional(city),
-            state=_optional(state) or "WA",
+            state=_optional(state),
             products=_optional(products),
             delivery_capability=_optional(delivery_capability),
             online_ordering=_optional(online_ordering),
@@ -172,7 +190,7 @@ def submit_driver_interest(
             email=email.strip().lower(),
             phone=_optional(phone),
             city=_optional(city),
-            state=_optional(state) or "WA",
+            state=_optional(state),
             vehicle_type=_optional(vehicle_type),
             availability_notes=_optional(availability_notes),
             territory_preference=_optional(territory_preference),
@@ -206,6 +224,7 @@ def _public_template(request: Request, template_name: str, path: str, context: d
         "meta_description": description,
         "og_title": title,
         "og_description": description,
+        "canonical_url": str(request.url),
     }
     if context:
         payload.update(context)

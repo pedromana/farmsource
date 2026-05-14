@@ -4,19 +4,48 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#2f6f4e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Farmsource">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>{% block title %}{{ seo_title | default("Farmsource") }}{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}{{ meta_description | default('Farmsource connects Seattle customers with local producers through scheduled neighborhood produce delivery routes.') }}{% endblock %}">
+    <meta name="description" content="{% block meta_description %}{{ meta_description | default('Farmsource connects customers nationwide with local producers through scheduled neighborhood produce delivery routes.') }}{% endblock %}">
+    <link rel="canonical" href="{{ canonical_url | default(request.url if request is defined else '/') }}">
     <meta property="og:title" content="{{ og_title | default(seo_title | default('Farmsource')) }}">
     <meta property="og:description" content="{{ og_description | default(meta_description | default('Fresh local produce through scheduled neighborhood delivery routes.')) }}">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80">
     <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/static/icons/icon.svg">
+    <link rel="preload" href="/static/css/styles.css" as="style">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Farmsource",
+        "url": "{{ request.base_url if request is defined else '/' }}",
+        "description": "Farmsource is a nationwide farm-to-consumer marketplace for local produce, regional producers, scheduled neighborhood delivery routes, customer waitlists, producer onboarding, and driver route operations.",
+        "sameAs": []
+      }
+    </script>
   </head>
   <body>
+    {% set current_path = request.url.path if request is defined else "" %}
+    {% if not current_path.startswith("/customer") and not current_path.startswith("/driver") %}
     <header class="site-header">
-      <a class="brand" href="/">Farmsource</a>
+      <a class="brand" href="/" aria-label="Farmsource home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" focusable="false">
+            <path class="brand-mark-leaf" d="M20 6c7 0 13 6 13 13 0 8-6 14-14 14H7V21C7 13 12 6 20 6Z"></path>
+            <path class="brand-mark-row" d="M12 25c5-8 11-12 19-13"></path>
+            <path class="brand-mark-row" d="M13 30c4-4 9-6 16-6"></path>
+          </svg>
+        </span>
+        <span>Farmsource</span>
+      </a>
       <nav aria-label="Primary navigation">
+        <a href="/">Home</a>
         <a href="/how-it-works">How it works</a>
         <a href="/for-customers">Customers</a>
         <a href="/for-producers">Producers</a>
@@ -24,6 +53,7 @@
         <a href="/waitlist">Waitlist</a>
         <a href="/faq">FAQ</a>
         <a href="/customer/catalog">Shop</a>
+        <a href="/admin/marketing">Marketing</a>
         <a class="cart-icon-link" href="/customer/cart" aria-label="Cart">
           <span class="cart-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false">
@@ -43,10 +73,26 @@
         <a href="/driver">Driver app</a>
       </nav>
     </header>
+    {% endif %}
     <main>
       {% block content %}{% endblock %}
     </main>
+    {% if current_path.startswith("/customer") %}
+      <nav class="mobile-app-nav customer-mobile-nav" aria-label="Customer app navigation">
+        <a href="/customer/catalog">Shop</a>
+        <a href="/customer/cart">Cart{% if cart_count | default(0) %}<span>{{ cart_count }}</span>{% endif %}</a>
+        <a href="/customer/orders">Orders</a>
+      </nav>
+    {% elif current_path.startswith("/driver") %}
+      <nav class="mobile-app-nav driver-mobile-nav" aria-label="Driver app navigation">
+        <a href="/driver/routes">Routes</a>
+        <a href="/driver">Home</a>
+        <a href="/driver/logout">Logout</a>
+      </nav>
+    {% endif %}
+    <div class="toast" data-toast hidden></div>
     <script src="/static/js/app.js" defer></script>
+    {% if current_path.startswith("/customer") %}
     <dialog class="cart-ready-dialog" data-cart-dialog>
       <form method="dialog">
         <p class="eyebrow">Cart ready</p>
@@ -58,5 +104,6 @@
         </div>
       </form>
     </dialog>
+    {% endif %}
   </body>
 </html>

@@ -16,6 +16,9 @@ from app.models import (
     DriverInterest,
     DriverPayout,
     ImportRun,
+    MarketingContent,
+    MarketingContentAsset,
+    MarketingContentSchedule,
     Order,
     Producer,
     ProducerInterest,
@@ -33,7 +36,8 @@ from app.services.catalog import LOW_INVENTORY_THRESHOLD, low_inventory_availabi
 from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
 from app.services.delivery import assign_route_to_driver, ensure_route_payout, order_summary, refresh_route_estimates, route_driver_suggestions, route_progress, sync_stop_from_order
-from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_interests_to_excel, driver_payouts_to_excel, drivers_to_excel, orders_to_excel, producer_interests_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel, waitlist_to_excel
+from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_interests_to_excel, driver_payouts_to_excel, drivers_to_excel, marketing_content_to_excel, orders_to_excel, producer_interests_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel, waitlist_to_excel
+from app.services.ai_services.content_generator import CONTENT_STATUSES, CONTENT_TYPES, POSTING_STATUSES, TARGET_AUDIENCES, TARGET_PLATFORMS, generate_marketing_content
 
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -185,6 +189,163 @@ def admin_waitlist(request: Request, db: Annotated[Session, Depends(get_db)], si
 def admin_producer_interests(request: Request, db: Annotated[Session, Depends(get_db)]):
     interests = db.scalars(select(ProducerInterest).order_by(ProducerInterest.created_at.desc())).all()
     return templates.TemplateResponse("admin_producer_interests.html", {"request": request, "interests": interests})
+
+
+@router.get("/marketing")
+def marketing_dashboard(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    content_type: str | None = None,
+    audience: str | None = None,
+    platform: str | None = None,
+    status: str | None = None,
+):
+    query = _filtered_marketing_query(content_type, audience, platform, status)
+    contents = db.scalars(query.order_by(MarketingContent.created_at.desc())).all()
+    scheduled = db.scalars(select(MarketingContentSchedule).order_by(MarketingContentSchedule.scheduled_date.asc()).limit(20)).all()
+    return templates.TemplateResponse(
+        "admin_marketing.html",
+        {
+            "request": request,
+            "contents": contents,
+            "scheduled": scheduled,
+            "filters": {"content_type": content_type or "", "audience": audience or "", "platform": platform or "", "status": status or ""},
+            "content_types": CONTENT_TYPES,
+            "target_audiences": TARGET_AUDIENCES,
+            "target_platforms": TARGET_PLATFORMS,
+            "content_statuses": CONTENT_STATUSES,
+            "draft_count": db.scalar(select(func.count(MarketingContent.id)).where(MarketingContent.status.in_(["draft", "generated", "ready_for_review"]))),
+            "approved_count": db.scalar(select(func.count(MarketingContent.id)).where(MarketingContent.status == "approved")),
+            "scheduled_count": db.scalar(select(func.count(MarketingContentSchedule.id)).where(MarketingContentSchedule.posting_status.in_(["planned", "pending"]))),
+        },
+    )
+
+
+@router.get("/marketing/new")
+def new_marketing_content(request: Request):
+    return templates.TemplateResponse(
+        "admin_marketing_form.html",
+        {
+            "request": request,
+            "content": MarketingContent(content_type="produce_box", target_platform="instagram", target_audience="customers", status="draft"),
+            "content_types": CONTENT_TYPES,
+            "target_audiences": TARGET_AUDIENCES,
+            "target_platforms": TARGET_PLATFORMS,
+            "content_statuses": CONTENT_STATUSES,
+        },
+    )
+
+
+@router.post("/marketing")
+async def create_marketing_content(request: Request, db: Annotated[Session, Depends(get_db)]):
+    form = await request.form()
+    content = MarketingContent()
+    _apply_marketing_form(content, form)
+    if form.get("generate") == "on":
+        _generate_marketing_fields(content)
+    db.add(content)
+    db.flush()
+    _sync_marketing_schedule(db, content)
+    _add_marketing_asset(db, content, form)
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
+
+
+@router.get("/marketing/calendar")
+def marketing_calendar(request: Request, db: Annotated[Session, Depends(get_db)]):
+    schedules = db.scalars(select(MarketingContentSchedule).order_by(MarketingContentSchedule.scheduled_date.asc())).all()
+    drafts = db.scalars(select(MarketingContent).where(MarketingContent.status.in_(["draft", "generated", "ready_for_review"])).order_by(MarketingContent.created_at.desc()).limit(25)).all()
+    approved = db.scalars(select(MarketingContent).where(MarketingContent.status == "approved").order_by(MarketingContent.updated_at.desc()).limit(25)).all()
+    return templates.TemplateResponse("admin_marketing_calendar.html", {"request": request, "schedules": schedules, "drafts": drafts, "approved": approved})
+
+
+@router.get("/marketing/drafts")
+def marketing_drafts(request: Request, db: Annotated[Session, Depends(get_db)]):
+    contents = db.scalars(
+        select(MarketingContent)
+        .where(MarketingContent.status.in_(["draft", "generated", "ready_for_review", "rejected"]))
+        .order_by(MarketingContent.created_at.desc())
+    ).all()
+    return templates.TemplateResponse("admin_marketing_drafts.html", {"request": request, "contents": contents})
+
+
+@router.get("/marketing/{content_id}")
+def edit_marketing_content(content_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    return templates.TemplateResponse(
+        "admin_marketing_form.html",
+        {
+            "request": request,
+            "content": content,
+            "content_types": CONTENT_TYPES,
+            "target_audiences": TARGET_AUDIENCES,
+            "target_platforms": TARGET_PLATFORMS,
+            "content_statuses": CONTENT_STATUSES,
+            "posting_statuses": POSTING_STATUSES,
+        },
+    )
+
+
+@router.post("/marketing/{content_id}")
+async def update_marketing_content(content_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    form = await request.form()
+    _apply_marketing_form(content, form)
+    if form.get("generate") == "on":
+        _generate_marketing_fields(content)
+    _sync_marketing_schedule(db, content)
+    _add_marketing_asset(db, content, form)
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
+
+
+@router.post("/marketing/{content_id}/generate")
+def generate_marketing_draft(content_id: int, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    _generate_marketing_fields(content)
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
+
+
+@router.post("/marketing/{content_id}/approve")
+def approve_marketing_draft(content_id: int, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    content.status = "approved"
+    content.approved = True
+    _sync_marketing_schedule(db, content)
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
+
+
+@router.post("/marketing/{content_id}/reject")
+def reject_marketing_draft(content_id: int, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    content.status = "rejected"
+    content.approved = False
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
+
+
+@router.post("/marketing/{content_id}/mark-posted")
+def mark_marketing_posted(content_id: int, db: Annotated[Session, Depends(get_db)]):
+    content = db.get(MarketingContent, content_id)
+    if not content:
+        raise HTTPException(status_code=404, detail="Marketing content not found")
+    content.status = "posted"
+    for schedule in content.schedules:
+        schedule.posting_status = "posted"
+    db.commit()
+    return RedirectResponse(f"/admin/marketing/{content.id}", status_code=303)
 
 
 @router.get("/delivery-windows")
@@ -419,6 +580,7 @@ def export_operational_data(export_type: str, db: Annotated[Session, Depends(get
         "waitlist": lambda: waitlist_to_excel(db),
         "producer-interests": lambda: producer_interests_to_excel(db),
         "driver-interests": lambda: driver_interests_to_excel(db),
+        "marketing-content": lambda: marketing_content_to_excel(db),
     }
     if export_type not in exporters:
         raise HTTPException(status_code=404, detail="Export not found")
@@ -810,6 +972,88 @@ def export_producers(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers=headers,
+    )
+
+
+def _filtered_marketing_query(
+    content_type: str | None,
+    audience: str | None,
+    platform: str | None,
+    status: str | None,
+):
+    query = select(MarketingContent)
+    if content_type:
+        query = query.where(MarketingContent.content_type == content_type)
+    if audience:
+        query = query.where(MarketingContent.target_audience == audience)
+    if platform:
+        query = query.where(MarketingContent.target_platform == platform)
+    if status:
+        query = query.where(MarketingContent.status == status)
+    return query
+
+
+def _apply_marketing_form(content: MarketingContent, form) -> None:
+    content.content_type = _optional(form.get("content_type")) or "produce_box"
+    content.content_theme = _optional(form.get("content_theme")) or "fresh produce"
+    content.title = _required_text(form.get("title"), "title")
+    content.short_description = _optional(form.get("short_description"))
+    content.ai_prompt = _optional(form.get("ai_prompt"))
+    content.generated_caption = _optional(form.get("generated_caption"))
+    content.generated_hashtags = _optional(form.get("generated_hashtags"))
+    content.generated_video_prompt = _optional(form.get("generated_video_prompt"))
+    content.generated_script = _optional(form.get("generated_script"))
+    content.target_platform = _optional(form.get("target_platform")) or "instagram"
+    content.target_audience = _optional(form.get("target_audience")) or "general"
+    content.status = _optional(form.get("status")) or "draft"
+    content.scheduled_date = _optional_datetime(form.get("scheduled_date"))
+    content.approved = form.get("approved") == "on" or content.status == "approved"
+    content.notes = _optional(form.get("notes"))
+    if content.approved and content.status not in {"approved", "posted"}:
+        content.status = "approved"
+
+
+def _generate_marketing_fields(content: MarketingContent) -> None:
+    generated = generate_marketing_content(
+        content.content_type,
+        content.content_theme,
+        content.target_platform,
+        content.target_audience,
+        seed_title=content.title,
+        notes=content.notes,
+    )
+    content.title = generated.title
+    content.short_description = content.short_description or generated.short_description
+    content.ai_prompt = generated.ai_prompt
+    content.generated_caption = generated.generated_caption
+    content.generated_hashtags = generated.generated_hashtags
+    content.generated_video_prompt = generated.generated_video_prompt
+    content.generated_script = generated.generated_script
+    if content.status == "draft":
+        content.status = "generated"
+
+
+def _sync_marketing_schedule(db: Session, content: MarketingContent) -> None:
+    if not content.scheduled_date:
+        return
+    schedule = content.schedules[0] if content.schedules else MarketingContentSchedule(marketing_content_id=content.id, scheduled_date=content.scheduled_date, posting_platform=content.target_platform)
+    schedule.scheduled_date = content.scheduled_date
+    schedule.posting_platform = content.target_platform
+    if not schedule.posting_status:
+        schedule.posting_status = "planned"
+    db.add(schedule)
+
+
+def _add_marketing_asset(db: Session, content: MarketingContent, form) -> None:
+    asset_url = _optional(form.get("asset_url"))
+    if not asset_url:
+        return
+    db.add(
+        MarketingContentAsset(
+            marketing_content_id=content.id,
+            asset_type=_optional(form.get("asset_type")) or "reference",
+            asset_url=asset_url,
+        )
     )
 
 

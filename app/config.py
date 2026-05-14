@@ -21,8 +21,11 @@ class Settings(BaseSettings):
     stripe_publishable_key: str | None = Field(default=None, validation_alias="STRIPE_PUBLISHABLE_KEY")
     app_base_url: str = Field(default="http://127.0.0.1:8000", validation_alias="APP_BASE_URL")
     session_secret_key: str = Field(default="change-this-local-secret", validation_alias="SESSION_SECRET_KEY")
+    session_cookie_secure: bool = Field(default=False, validation_alias="SESSION_COOKIE_SECURE")
     admin_default_email: str = Field(default="admin@farmsource.local", validation_alias="ADMIN_DEFAULT_EMAIL")
     admin_default_password: str = Field(default="ChangeMe123!", validation_alias="ADMIN_DEFAULT_PASSWORD")
+    marketing_ai_provider: str = Field(default="mock", validation_alias="MARKETING_AI_PROVIDER")
+    rate_limit_enabled: bool = Field(default=False, validation_alias="RATE_LIMIT_ENABLED")
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

@@ -2,6 +2,7 @@
 {% block title %}Checkout | Farmsource{% endblock %}
 {% block content %}
 <section class="workspace narrow">
+  <div class="app-page-bar"><a href="/customer/catalog">Shop</a><a href="/customer/cart">Cart</a><a href="/customer/orders">Orders</a></div>
   <div class="page-heading">
     <p class="eyebrow">Scheduled delivery</p>
     <h1>Checkout</h1>
@@ -36,13 +37,13 @@
         <div><dt>Total</dt><dd>${{ "%.2f"|format(totals.total) }}</dd></div>
       </dl>
     </div>
-    <div class="actions full">
+    <div class="actions full sticky-action-panel">
       <a class="button" href="/customer/cart">Back to cart</a>
       <button class="primary" type="submit">Continue to Stripe Checkout</button>
     </div>
   </form>
   {% else %}
-    <article><h2>Checkout unavailable</h2><p>Your cart is empty or no delivery windows are open.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
+    <article class="empty-state"><h2>Checkout unavailable</h2><p>Your cart is empty or no delivery windows are open.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
   {% endif %}
 </section>
 {% endblock %}

@@ -2,8 +2,9 @@ from fastapi.testclient import TestClient
 
 from app.database import SessionLocal
 from app.main import app
-from app.models import DeliveryWindow, Order, Product
+from app.models import DeliveryWindow, Order
 from app.config import get_settings
+from app.services.catalog import active_product_query
 
 
 def test_customer_cart_checkout_local_payment_flow(monkeypatch) -> None:
@@ -11,7 +12,7 @@ def test_customer_cart_checkout_local_payment_flow(monkeypatch) -> None:
     get_settings.cache_clear()
     with TestClient(app) as client:
         with SessionLocal() as db:
-            product = db.query(Product).filter(Product.active.is_(True)).first()
+            product = db.scalars(active_product_query()).first()
             window = db.query(DeliveryWindow).filter(DeliveryWindow.active.is_(True)).first()
             assert product is not None
             assert window is not None
@@ -74,7 +75,7 @@ def test_order_lookup_page_loads() -> None:
 def test_ajax_cart_add_and_update_returns_live_totals() -> None:
     with TestClient(app) as client:
         with SessionLocal() as db:
-            product = db.query(Product).filter(Product.active.is_(True)).first()
+            product = db.scalars(active_product_query()).first()
             assert product is not None
             product_id = product.id
 

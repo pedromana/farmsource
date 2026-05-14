@@ -1,6 +1,6 @@
 <article class="product-card">
   <a class="product-image" href="/customer/product/{{ product.id }}">
-    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}">
+    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}" loading="lazy" decoding="async">
   </a>
   <div class="product-card-body">
     <p class="eyebrow">{{ product.category.name if product.category else "Local product" }}</p>
@@ -17,7 +17,7 @@
       <form method="post" action="/customer/cart/add" class="inline-cart-form" data-product-name="{{ product.name }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <input type="hidden" name="quantity" value="1">
-        <button class="primary add-cart-button" type="submit">Add to cart</button>
+        <button class="primary add-cart-button touch-button" type="submit">Add to cart</button>
       </form>
     {% else %}
       <p class="availability unavailable">Currently unavailable</p>

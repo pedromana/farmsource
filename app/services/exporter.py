@@ -4,7 +4,7 @@ import pandas as pd
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from app.models import Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, Order, Producer, ProducerInterest, Product, ProductAvailability, Route, RouteStop, WaitlistSignup
+from app.models import Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, MarketingContent, Order, Producer, ProducerInterest, Product, ProductAvailability, Route, RouteStop, WaitlistSignup
 from app.services.delivery import order_summary, route_progress
 
 
@@ -404,4 +404,31 @@ def driver_interests_to_excel(db: Session) -> BytesIO:
             for row in rows
         ],
         "driver_interests",
+    )
+
+
+def marketing_content_to_excel(db: Session) -> BytesIO:
+    rows = db.scalars(select(MarketingContent).order_by(MarketingContent.created_at.desc())).all()
+    return rows_to_excel(
+        [
+            {
+                "title": row.title,
+                "content_type": row.content_type,
+                "content_theme": row.content_theme,
+                "target_platform": row.target_platform,
+                "target_audience": row.target_audience,
+                "status": row.status,
+                "approved": row.approved,
+                "scheduled_date": row.scheduled_date,
+                "generated_caption": row.generated_caption,
+                "generated_hashtags": row.generated_hashtags,
+                "generated_video_prompt": row.generated_video_prompt,
+                "generated_script": row.generated_script,
+                "notes": row.notes,
+                "created_at": row.created_at,
+                "updated_at": row.updated_at,
+            }
+            for row in rows
+        ],
+        "marketing_content",
     )

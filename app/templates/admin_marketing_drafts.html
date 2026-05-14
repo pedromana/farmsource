@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Marketing Drafts | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div><p class="eyebrow">AI marketing assistant</p><h1>Draft review queue</h1><p>Review generated drafts, approve them for manual posting, or reject them for revision.</p></div>
+    <div class="actions"><a class="button" href="/admin/marketing">Dashboard</a><a class="button primary" href="/admin/marketing/new">Generate content</a></div>
+  </div>
+  <div class="marketing-grid">
+    {% for content in contents %}
+      <article class="marketing-card">
+        <div class="card-meta"><span class="status-pill">{{ content.status.replace("_", " ") }}</span><span>{{ content.content_type.replace("_", " ") }}</span></div>
+        <h2>{{ content.title }}</h2>
+        <p>{{ content.generated_caption or content.short_description or "No generated caption yet." }}</p>
+        <p class="muted">{{ content.generated_hashtags or "" }}</p>
+        <div class="actions"><a class="button" href="/admin/marketing/{{ content.id }}">Review</a></div>
+      </article>
+    {% else %}
+      <article class="marketing-card"><h2>No drafts waiting for review.</h2></article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

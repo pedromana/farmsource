@@ -30,6 +30,7 @@ def test_admin_route_and_delivery_exports_load() -> None:
             "/admin/exports/delivery-summary",
             "/admin/exports/driver-payouts",
             "/admin/exports/failed-deliveries",
+            "/admin/exports/marketing-content",
         ):
             response = client.get(path)
             assert response.status_code == 200

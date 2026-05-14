@@ -2,6 +2,7 @@
 {% block title %}Order {{ order.order_number }} | Farmsource{% endblock %}
 {% block content %}
 <section class="workspace narrow">
+  <div class="app-page-bar"><a href="/customer/catalog">Shop</a><a href="/customer/cart">Cart</a><a href="/customer/orders">Orders</a></div>
   <div class="page-heading"><p class="eyebrow">Order</p><h1>{{ order.order_number }}</h1><p>{{ order.order_status }} | {{ order.payment_status }}</p></div>
   <article class="summary-card"><h2>Delivery window</h2><p>{{ order.delivery_window.name if order.delivery_window else "Pending" }}</p></article>
   <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Total</th></tr></thead><tbody>{% for item in order.items %}<tr><td>{{ item.product.name }}</td><td>{{ item.quantity }}</td><td>${{ "%.2f"|format(item.total_price) }}</td></tr>{% endfor %}</tbody></table></div>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1170 2532">
+  <rect width="1170" height="2532" fill="#f7f5ef"/>
+  <g transform="translate(329 910)">
+    <rect width="512" height="512" rx="96" fill="#2f6f4e"/>
+    <path d="M260 76c88 0 160 71 160 160 0 93-74 168-168 168H100V252C100 154 163 76 260 76Z" fill="#f7f5ef"/>
+    <path d="M152 314c68-104 142-156 240-168" fill="none" stroke="#2f6f4e" stroke-width="34" stroke-linecap="round"/>
+    <path d="M164 378c54-52 119-78 207-78" fill="none" stroke="#2f6f4e" stroke-width="28" stroke-linecap="round"/>
+  </g>
+  <text x="585" y="1520" text-anchor="middle" font-family="Arial, sans-serif" font-size="88" font-weight="800" fill="#1d2a24">Farmsource</text>
+  <text x="585" y="1596" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#66746d">Local food. Planned routes.</text>
+</svg>

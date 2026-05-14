@@ -1,0 +1,38 @@
+{
+  "name": "farmsource",
+  "version": "1.0.0",
+  "description": "Capacitor wrapper tooling for the Farmsource mobile-first web app.",
+  "private": true,
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "cap:sync": "cap sync",
+    "cap:sync:shop": "node scripts/prepare-capacitor-app.mjs shop --sync",
+    "cap:sync:driver": "node scripts/prepare-capacitor-app.mjs driver --sync",
+    "android:build:shop": "node scripts/prepare-capacitor-app.mjs shop --sync && cd android && gradlew.bat assembleDebug",
+    "android:build:driver": "node scripts/prepare-capacitor-app.mjs driver --sync && cd android && gradlew.bat assembleDebug",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "cap:copy": "cap copy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedromana/farmsource.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/pedromana/farmsource/issues"
+  },
+  "homepage": "https://github.com/pedromana/farmsource#readme",
+  "devDependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "typescript": "^6.0.3"
+  }
+}

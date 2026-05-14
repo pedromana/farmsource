@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Marketing | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">AI marketing assistant</p>
+      <h1>Marketing content</h1>
+      <p>Generate daily social ideas, review drafts, approve content, and schedule manual posting.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/marketing/drafts">Drafts</a>
+      <a class="button" href="/admin/marketing/calendar">Calendar</a>
+      <a class="button primary" href="/admin/marketing/new">Generate content</a>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <article><span>Draft/review</span><strong>{{ draft_count or 0 }}</strong></article>
+    <article><span>Approved</span><strong>{{ approved_count or 0 }}</strong></article>
+    <article><span>Scheduled</span><strong>{{ scheduled_count or 0 }}</strong></article>
+  </div>
+  <form class="filter-bar compact-filter" method="get" action="/admin/marketing">
+    <select name="content_type"><option value="">All content types</option>{% for option in content_types %}<option value="{{ option }}" {% if filters.content_type == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select>
+    <select name="audience"><option value="">All audiences</option>{% for option in target_audiences %}<option value="{{ option }}" {% if filters.audience == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+    <select name="platform"><option value="">All platforms</option>{% for option in target_platforms %}<option value="{{ option }}" {% if filters.platform == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select>
+    <select name="status"><option value="">All statuses</option>{% for option in content_statuses %}<option value="{{ option }}" {% if filters.status == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select>
+    <button type="submit">Filter</button>
+  </form>
+  <div class="marketing-grid">
+    {% for content in contents %}
+      <article class="marketing-card">
+        <div class="card-meta"><span class="status-pill">{{ content.status.replace("_", " ") }}</span><span>{{ content.target_platform.replace("_", " ") }}</span><span>{{ content.target_audience }}</span></div>
+        <h2>{{ content.title }}</h2>
+        <p>{{ content.short_description or content.content_theme }}</p>
+        <p class="muted">{{ content.generated_hashtags or "No hashtags generated yet." }}</p>
+        <div class="actions"><a class="button" href="/admin/marketing/{{ content.id }}">Review</a></div>
+      </article>
+    {% else %}
+      <article class="marketing-card"><h2>No marketing content yet.</h2><p>Generate the first daily draft to start the workflow.</p></article>
+    {% endfor %}
+  </div>
+  <section class="dashboard-grid">
+    <article>
+      <h2>Upcoming scheduled content</h2>
+      {% for schedule in scheduled %}
+        <p><strong>{{ schedule.scheduled_date.strftime("%Y-%m-%d") if schedule.scheduled_date else "" }}</strong> {{ schedule.posting_platform.replace("_", " ") }} - <a href="/admin/marketing/{{ schedule.marketing_content_id }}">{{ schedule.marketing_content.title }}</a> ({{ schedule.posting_status }})</p>
+      {% else %}
+        <p>No scheduled content yet.</p>
+      {% endfor %}
+    </article>
+  </section>
+</section>
+{% endblock %}

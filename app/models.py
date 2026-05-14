@@ -445,3 +445,57 @@ class ContactMessage(Base):
     subject: Mapped[str | None] = mapped_column(String(255))
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class MarketingContent(Base, TimestampMixin):
+    __tablename__ = "marketing_content"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    content_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    content_theme: Mapped[str | None] = mapped_column(String(160), index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    short_description: Mapped[str | None] = mapped_column(Text)
+    ai_prompt: Mapped[str | None] = mapped_column(Text)
+    generated_caption: Mapped[str | None] = mapped_column(Text)
+    generated_hashtags: Mapped[str | None] = mapped_column(Text)
+    generated_video_prompt: Mapped[str | None] = mapped_column(Text)
+    generated_script: Mapped[str | None] = mapped_column(Text)
+    target_platform: Mapped[str] = mapped_column(String(40), default="instagram", nullable=False, index=True)
+    target_audience: Mapped[str] = mapped_column(String(40), default="general", nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), default="draft", nullable=False, index=True)
+    scheduled_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    assets: Mapped[list["MarketingContentAsset"]] = relationship(
+        back_populates="marketing_content",
+        cascade="all, delete-orphan",
+    )
+    schedules: Mapped[list["MarketingContentSchedule"]] = relationship(
+        back_populates="marketing_content",
+        cascade="all, delete-orphan",
+    )
+
+
+class MarketingContentAsset(Base):
+    __tablename__ = "marketing_content_assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    marketing_content_id: Mapped[int] = mapped_column(ForeignKey("marketing_content.id"), nullable=False, index=True)
+    asset_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    asset_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    marketing_content: Mapped[MarketingContent] = relationship(back_populates="assets")
+
+
+class MarketingContentSchedule(Base, TimestampMixin):
+    __tablename__ = "marketing_content_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    marketing_content_id: Mapped[int] = mapped_column(ForeignKey("marketing_content.id"), nullable=False, index=True)
+    scheduled_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    posting_platform: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    posting_status: Mapped[str] = mapped_column(String(40), default="planned", nullable=False, index=True)
+
+    marketing_content: Mapped[MarketingContent] = relationship(back_populates="schedules")

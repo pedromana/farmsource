@@ -3,7 +3,7 @@
 {% block content %}
 <section class="product-detail">
   <div class="product-detail-image">
-    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}">
+    <img src="{{ product.image_url or placeholder_image }}" alt="{{ product.name }}" loading="eager" decoding="async">
   </div>
   <div class="product-detail-copy">
     <p class="eyebrow">{{ product.category.name if product.category else "Local product" }}</p>
@@ -16,7 +16,7 @@
       <form method="post" action="/customer/cart/add" class="quantity-form" data-product-name="{{ product.name }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <label>Quantity <input type="number" name="quantity" min="1" max="{{ remaining_inventory(availability) }}" value="1"></label>
-        <button class="primary add-cart-button" type="submit">Add to cart</button>
+        <button class="primary add-cart-button touch-button" type="submit">Add to cart</button>
       </form>
     {% else %}
       <p class="availability unavailable">Currently unavailable for the active delivery window.</p>
@@ -27,4 +27,5 @@
     </div>
   </div>
 </section>
+<a class="sticky-cart-cta" href="/customer/cart">View cart <span data-cart-count {% if not cart_count | default(0) %}hidden{% endif %}>{{ cart_count | default(0) }}</span></a>
 {% endblock %}

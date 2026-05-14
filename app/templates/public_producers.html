@@ -2,5 +2,5 @@
 {% from "_public_forms.html" import producer_form, success_banner %}
 {% block content %}
 <section class="public-page-hero"><p class="eyebrow">For producers</p><h1>Reach local customers through a simpler delivery model.</h1><p>Farmsource aggregates customer demand, curates weekly offerings, and coordinates scheduled routes.</p></section>
-<section class="public-section two-column"><div><h2>Producer benefits</h2><ul><li>Access Seattle-area customers</li><li>Predictable delivery windows</li><li>Farmsource handles route coordination</li><li>Works with future CSV and source onboarding</li></ul></div><div>{{ success_banner(submitted, "Thanks. We received your producer interest form.") }}{{ producer_form() }}</div></section>
+<section class="public-section two-column"><div><h2>Producer benefits</h2><ul><li>Access nearby customers</li><li>Predictable delivery windows</li><li>Farmsource handles route coordination</li><li>Works with future CSV and source onboarding</li></ul></div><div>{{ success_banner(submitted, "Thanks. We received your producer interest form.") }}{{ producer_form() }}</div></section>
 {% endblock %}

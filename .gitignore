@@ -28,3 +28,14 @@ data/imports/*
 .DS_Store
 
 logs/
+
+node_modules/
+npm-debug.log*
+
+android/.gradle/
+android/app/build/
+android/build/
+
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/

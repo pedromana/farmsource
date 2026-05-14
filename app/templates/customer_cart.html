@@ -2,6 +2,7 @@
 {% block title %}Cart | Farmsource{% endblock %}
 {% block content %}
 <section class="workspace narrow">
+  <div class="app-page-bar"><a href="/customer/catalog">Shop</a><a href="/customer/cart">Cart</a><a href="/customer/orders">Orders</a></div>
   <div class="page-heading">
     <p class="eyebrow">Checkout</p>
     <h1>Your cart</h1>
@@ -32,12 +33,12 @@
         <div><dt>Total</dt><dd data-cart-total>${{ "%.2f"|format(totals.total) }}</dd></div>
       </dl>
     </div>
-    <div class="actions">
+    <div class="actions sticky-action-panel">
       <a class="button" href="/customer/catalog">Keep shopping</a>
       <a class="button primary" href="/customer/checkout">Checkout</a>
     </div>
   {% else %}
-    <article><h2>Your cart is empty</h2><p>Add curated produce from the weekly catalog.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
+    <article class="empty-state"><h2>Your cart is empty</h2><p>Add curated produce from the weekly catalog.</p><a class="button primary" href="/customer/catalog">Browse catalog</a></article>
   {% endif %}
 </section>
 {% endblock %}

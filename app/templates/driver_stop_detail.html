@@ -2,6 +2,7 @@
 {% block title %}Stop {{ stop.stop_sequence }} | Farmsource{% endblock %}
 {% block content %}
 <section class="driver-app">
+  <div class="app-page-bar driver-tabs"><a href="/driver/route/{{ stop.route_id }}">Route</a><a href="/driver/routes">Routes</a></div>
   <div class="driver-topbar">
     <div><p class="eyebrow">Stop {{ stop.stop_sequence }}</p><h1>{{ stop.customer_name or "Customer" }}</h1></div>
     <a href="/driver/route/{{ stop.route_id }}">Route</a>
@@ -23,9 +24,9 @@
     <label>Failed reason<textarea name="failed_reason">{{ stop.failed_reason or '' }}</textarea></label>
     <label>Proof photo URL placeholder<input name="proof_of_delivery_url" value="{{ stop.proof_of_delivery_url or '' }}"></label>
     <div class="driver-actions">
-      <button class="primary" name="action_status" value="delivered">Mark delivered</button>
-      <button name="action_status" value="failed">Mark failed</button>
-      <button name="action_status" value="{{ stop.stop_status }}">Save notes</button>
+      <button class="primary touch-button" name="action_status" value="delivered">Mark delivered</button>
+      <button class="touch-button" name="action_status" value="failed">Mark failed</button>
+      <button class="touch-button" name="action_status" value="{{ stop.stop_status }}">Save notes</button>
     </div>
   </form>
 </section>

@@ -1,6 +1,6 @@
 # Farmsource
 
-Farmsource is a v1 foundation for a local farm-to-consumer marketplace. The pilot is aimed at the Seattle region and is designed around scheduled delivery routes, not instant delivery.
+Farmsource is a v1 foundation for a local farm-to-consumer marketplace designed for regional launches across the United States. It is built around scheduled delivery routes, not instant delivery.
 
 This repository is intentionally small: it provides the FastAPI app, environment-based configuration, SQLite database setup, static files, basic page shells, Docker support, and deployment notes.
 
@@ -17,7 +17,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - Admin operations dashboard at `/admin/dashboard`
 - Admin order, customer, driver, route, delivery-window, and export management
 - Scheduled route planning and mobile-friendly driver delivery workflow
-- Public marketing website, waitlist, and onboarding forms for the Seattle pilot
+- Public marketing website, waitlist, and onboarding forms for regional launches
 - Customer catalog at `/customer/catalog`
 - Customer cart and checkout at `/customer/cart` and `/customer/checkout`
 - Stripe Checkout redirect flow with local no-key simulation for development
@@ -28,7 +28,7 @@ This repository is intentionally small: it provides the FastAPI app, environment
 - SQLite local default with an easy path to PostgreSQL later
 - PWA-friendly static structure with a manifest and service worker placeholder
 - Dockerfile and `docker-compose.yml`
-- pandas and openpyxl dependencies for later Excel export work
+- pandas and openpyxl dependencies for Excel export work
 - Rule-based ordering readiness classification for ecommerce, CSA, platform stores, contact-only pages, social media, and unknown destinations
 - Curated v1 product catalog with simple delivery-window inventory
 - Customer ordering flow with cart, scheduled delivery windows, Stripe-hosted payment, and order status pages
@@ -116,6 +116,20 @@ To initialize manually, run:
 ```bash
 python -c "from app.database import init_db; init_db()"
 ```
+
+To load or refresh local demo data for pilot testing, run:
+
+```bash
+python seed_demo.py
+```
+
+For a clean local SQLite demo database only, use:
+
+```bash
+python seed_demo.py --reset
+```
+
+The reset command is guarded so it only runs when `APP_ENV` is local/development/test and `DATABASE_URL` points to SQLite. It is intended for local pilot rehearsals, not production.
 
 For PostgreSQL later, install an appropriate driver such as `psycopg` and set:
 
@@ -428,7 +442,7 @@ Future delivery expansion can add GPS tracking, route optimization, driver notif
 
 ## Public Website And Onboarding
 
-Phase 7 adds the public-facing Farmsource website for the Seattle pilot. This is separate from the customer ordering app and focuses on awareness, trust, onboarding, and lead collection.
+Phase 7 adds the public-facing Farmsource website for regional launch demand. This is separate from the customer ordering app and focuses on awareness, trust, onboarding, and lead collection.
 
 Public pages:
 
@@ -451,16 +465,226 @@ Lead tables:
 
 Onboarding flows:
 
-1. Customers join the Seattle pilot waitlist from `/waitlist` or `/for-customers`.
+1. Customers join the Farmsource launch waitlist from `/waitlist` or `/for-customers`.
 2. Producers submit business and product information from `/for-producers`.
 3. Drivers submit territory, vehicle, and availability information from `/for-drivers`.
 4. General inquiries are saved from `/contact`.
 5. Admin reviews submissions from `/admin/waitlist`, `/admin/producers/interests`, and `/admin/drivers/interests`.
 6. Admin exports lead lists from `/admin/exports/waitlist`, `/admin/exports/producer-interests`, and `/admin/exports/driver-interests`.
 
-The public pages include SEO-friendly page titles, meta descriptions, Open Graph placeholders, semantic page structure, local Seattle pilot messaging, and placeholders for Instagram, producer spotlights, featured farms, and seasonal produce highlights.
+The public pages include SEO-friendly page titles, meta descriptions, Open Graph placeholders, structured data, semantic page structure, nationwide launch messaging, and placeholders for Instagram, producer spotlights, featured farms, and seasonal produce highlights.
 
 Future marketing expansion can add SEO content/blog posts, producer profiles, native app download pages, referrals, promo codes, marketing integrations, automated onboarding, and richer local landing pages by neighborhood or region.
+
+## AI Marketing Assistant
+
+Phase 8 adds a lightweight AI-assisted marketing workflow for planning daily social content. It generates draft ideas, captions, hashtags, short-video prompts, short scripts, and calls to action, then stores them for manual review.
+
+Admin pages:
+
+- `/admin/marketing`: marketing dashboard with filters for content type, audience, platform, and status
+- `/admin/marketing/new`: create and generate a new content draft
+- `/admin/marketing/{id}`: review, edit, approve, reject, schedule, or mark manually posted
+- `/admin/marketing/calendar`: simple schedule view for planned, draft, and approved posts
+- `/admin/marketing/drafts`: review queue for generated drafts
+
+Marketing tables:
+
+- `marketing_content`: generated draft content, captions, hashtags, video prompts, scripts, approval status, and scheduling fields
+- `marketing_content_assets`: optional reference asset URLs for drafts
+- `marketing_content_schedules`: planned manual posting dates, platforms, and posting status
+
+The v1 workflow is intentionally manual:
+
+1. Generate an idea, caption, hashtags, video prompt, script, and CTA.
+2. Save the draft.
+3. Review and edit the generated content.
+4. Approve or reject the draft.
+5. Schedule approved content.
+6. Post manually outside Farmsource.
+7. Mark the content as posted after manual posting.
+
+No automatic Instagram, TikTok, Facebook, or YouTube posting is included. No autonomous agent, video rendering, analytics dashboard, engagement tracking, or social API integration is included in this phase.
+
+AI generation is provider-neutral. The current implementation uses deterministic mock generation under `app/services/ai_services/`:
+
+- `content_generator.py`: orchestrates ideas, full drafts, status constants, and CTA-ready output
+- `caption_generator.py`: captions and audience-specific CTAs
+- `hashtag_generator.py`: dynamic theme and audience hashtag sets
+- `video_prompt_generator.py`: vertical short-video prompts and scripts
+
+Set `MARKETING_AI_PROVIDER` in the environment for future provider selection. The current default is `mock`; future phases can add OpenAI, Claude, Gemini, image generation, video generation, automated posting, social analytics, engagement tracking, A/B testing, producer-generated content, and recommendation services without changing the admin workflow.
+
+## Mobile-First Customer And Driver Apps
+
+Phase 9 keeps one shared FastAPI/Jinja codebase and optimizes the customer and driver experiences as app-like mobile web applications. No separate iOS, Android, React Native, or Flutter app is included in v1.
+
+Customer mobile routes:
+
+- `/customer/catalog`
+- `/customer/product/{id}`
+- `/customer/cart`
+- `/customer/checkout`
+- `/customer/orders`
+- `/customer/order/{id}`
+
+Driver mobile routes:
+
+- `/driver`
+- `/driver/routes`
+- `/driver/route/{route_id}`
+- `/driver/stop/{stop_id}`
+
+Mobile UX improvements include bottom app navigation, touch-sized buttons, sticky cart and checkout actions, app-level tabs, lazy-loaded product images, inline cart updates, toast feedback, loading button states, better empty states, and simplified driver route/stop workflows.
+
+The driver workflow remains:
+
+1. Open the driver app.
+2. View assigned routes.
+3. Open an active route.
+4. Review stop progress and stop list.
+5. Open a stop.
+6. Mark delivered or failed.
+7. Return to the route and continue to the next stop.
+
+## PWA Setup
+
+The app includes basic Progressive Web App support:
+
+- `/static/manifest.json`: install metadata, standalone display mode, app shortcuts, theme/background colors, and icon placeholders
+- `/static/js/service-worker.js`: static asset cache placeholder for CSS, JS, and icon assets
+- `/static/icons/icon.svg`: install icon placeholder
+- `/static/icons/splash.svg`: splash screen placeholder
+
+The service worker intentionally avoids full offline synchronization, push notifications, advanced caching, and background sync. Those are future phases because ordering, checkout, and delivery completion need careful conflict handling before offline mode is safe.
+
+## Mobile Wrapping Strategy
+
+Recommended future Capacitor path:
+
+1. Keep Farmsource as the source of truth web app.
+2. Configure Capacitor to load the production HTTPS URL or a bundled web build if the frontend is later separated.
+3. Add native plugins only when needed: push notifications, GPS, camera proof uploads, deep links, and secure storage.
+4. Test the same customer and driver flows in mobile Safari, Chrome, Capacitor iOS, and Capacitor Android.
+5. Add App Store and Play Store packaging only after PWA workflows are stable in production.
+
+Cordova, Trusted Web Activity, or similar wrappers can follow the same approach: wrap the mobile-first web routes, keep API and operations logic in the shared backend, and avoid duplicating business logic in native clients.
+
+## Mobile App Wrapper
+
+Phase 9B adds Capacitor wrapper setup for two thin native shells over the existing Farmsource mobile-first web app. These wrappers do not duplicate customer code, driver code, routing, checkout logic, delivery workflow, or business rules. They load focused areas of the same Farmsource backend/frontend.
+
+Capacitor configuration:
+
+- Customer app name: `Farmsource Shop`
+- Customer app id: `com.farmsource.shop`
+- Customer start path: `/customer/catalog`
+- Driver app name: `Farmsource Driver`
+- Driver app id: `com.farmsource.driver`
+- Driver start path: `/driver`
+- Config file: `capacitor.config.ts`
+- Web directory: `app/static`
+- Default local mobile server URL: `http://10.0.2.2:8001`
+- App mode selector: `FARMSOURCE_APP_MODE=shop` or `FARMSOURCE_APP_MODE=driver`
+- Override URL: set `FARMSOURCE_MOBILE_SERVER_URL` before syncing/building
+
+The default URL is intended for Android emulator testing against a Farmsource server running on the host machine at port `8001`. For a physical Android device, iOS simulator, iOS device, or production app, use a reachable URL:
+
+```bash
+FARMSOURCE_MOBILE_SERVER_URL=https://your-domain.example npx cap sync
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:FARMSOURCE_MOBILE_SERVER_URL="https://your-domain.example"
+npm run cap:sync:shop
+```
+
+Initial wrapper setup commands:
+
+```bash
+npm install
+npx cap init Farmsource com.farmsource.app --web-dir app/static
+npx cap add android
+npx cap add ios
+npx cap sync
+```
+
+The repo already includes generated `android/` and `ios/` wrapper projects. Use the mode-specific scripts after changing `capacitor.config.ts`, static assets, icons, or the target server URL:
+
+```bash
+npm run cap:sync:shop
+npm run cap:sync:driver
+```
+
+Android workflow:
+
+```bash
+npm install
+npm run android:build:shop
+npm run android:build:driver
+npx cap open android
+```
+
+The current Android wrapper project is reused for both apps. The mode-specific scripts update the Android application id and app label before building:
+
+- Shop debug APK: build with `npm run android:build:shop`, package id `com.farmsource.shop`
+- Driver debug APK: build with `npm run android:build:driver`, package id `com.farmsource.driver`
+
+Android Studio can then run the app on an emulator or attached device. For local emulator testing, start Farmsource locally first:
+
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+Then use the default Capacitor URL `http://10.0.2.2:8001`. For MuMuPlayer with `adb reverse`, set `FARMSOURCE_MOBILE_SERVER_URL=http://127.0.0.1:8001`, run the mode-specific build, and reverse the port:
+
+```bash
+adb reverse tcp:8001 tcp:8001
+```
+
+For a physical Android device, set `FARMSOURCE_MOBILE_SERVER_URL` to the computer's LAN URL or a deployed HTTPS URL, then run the mode-specific build.
+
+Android build outputs are created by Android Studio or Gradle:
+
+- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+- Release APK: `android/app/build/outputs/apk/release/app-release.apk`
+- Release AAB: `android/app/build/outputs/bundle/release/app-release.aab`
+
+Android prerequisites:
+
+- Android Studio
+- Android SDK
+- JDK with `JAVA_HOME` set
+- Emulator image or physical Android device with USB debugging enabled
+
+iOS workflow:
+
+```bash
+npm install
+npx cap sync ios
+npx cap open ios
+```
+
+iOS builds require macOS and Xcode. The iOS project structure is present in `ios/`, but simulator/device builds must be performed on a Mac with Xcode installed. In Xcode, select the `App` scheme, choose a simulator or connected device, set signing/team settings, and run.
+
+Future iOS distribution path:
+
+1. Configure bundle signing in Xcode.
+2. Archive the app.
+3. Upload through Xcode Organizer or Transporter.
+4. Test through TestFlight.
+5. Submit to the App Store after privacy, permissions, and review metadata are ready.
+
+Current native assets are placeholders:
+
+- Web/PWA icon: `app/static/icons/icon.svg`
+- Web/PWA splash placeholder: `app/static/icons/splash.svg`
+- Android generated launcher/splash resources under `android/app/src/main/res/`
+- iOS generated app icon/splash resources under `ios/App/App/Assets.xcassets/`
+
+Future native API enhancements can add push notifications, camera proof-of-delivery uploads, GPS route support, offline queues, background sync, deep linking, and App Store/Play Store-specific configuration.
 
 ## Docker
 
@@ -477,6 +701,8 @@ docker compose up --build
 ```
 
 The app will be available at `http://127.0.0.1:8000`.
+
+For production, start from `.env.production.example`, set a long random `SESSION_SECRET_KEY`, set `SESSION_COOKIE_SECURE=true` behind HTTPS, replace the default admin password, and configure Stripe keys if checkout should use live Stripe.
 
 ## Production startup
 
@@ -496,7 +722,7 @@ gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 2 --bind 0.0.0.
 
 1. Install Python 3.11+ and Git on the server.
 2. Clone the repository.
-3. Create `.env` from `.env.example`.
+3. Create `.env` from `.env.production.example`.
 4. Set `DATABASE_URL` for SQLite or PostgreSQL.
 5. Install dependencies in a virtual environment.
 6. Run `python -c "from app.database import init_db; init_db()"`.
@@ -506,8 +732,51 @@ gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 2 --bind 0.0.0.
 
 For SQLite on Linux, make sure the deployment user can write to the `data/` directory. For PostgreSQL, keep credentials in `.env` and never commit them.
 
+Recommended Nginx setup:
+
+- terminate HTTPS with Let's Encrypt or another certificate provider
+- proxy `https://your-domain.example` to `http://127.0.0.1:8000`
+- forward `Host`, `X-Forwarded-For`, and `X-Forwarded-Proto`
+- serve static files through the app for v1, or offload `/static/` to Nginx later if traffic grows
+
+Systemd option:
+
+```ini
+[Unit]
+Description=Farmsource
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/farmsource
+EnvironmentFile=/opt/farmsource/.env
+ExecStart=/opt/farmsource/.venv/bin/gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 2 --bind 127.0.0.1:8000 --access-logfile - --error-logfile -
+Restart=always
+User=farmsource
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Future deployment work can add Alembic migrations, PostgreSQL as the default production database, object storage for proof photos/assets, Redis-backed rate limiting, structured JSON logs, and blue/green deploys.
+
 ## Tests
 
 ```bash
 pytest
 ```
+
+Phase 10 stabilization added v1 readiness coverage for the database connection, producer duplicate detection, product/category creation, delivery window capacity, mocked Stripe Checkout session creation, route assignment, driver stop completion, Excel exports, waitlist forms, marketing content creation, PWA/mobile wrappers, and a compact customer-to-driver delivery flow.
+
+Useful validation commands:
+
+```bash
+python seed_demo.py
+pytest
+docker compose config --quiet
+```
+
+Additional operator docs:
+
+- `V1_TESTING_CHECKLIST.md`: manual and automated checks for local pilot testing
+- `V1_RELEASE_NOTES.md`: implemented v1 features, limitations, and next steps
+- `PILOT_PLAN.md`: first pilot rehearsal flow and manual fallback procedures

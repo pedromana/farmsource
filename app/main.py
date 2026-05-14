@@ -1,8 +1,9 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -39,8 +40,30 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret_key,
     same_site="lax",
-    https_only=False,
+    https_only=settings.session_cookie_secure,
 )
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("Unhandled request error", extra={"path": request.url.path, "method": request.method})
+        raise
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+    logger.info(
+        "Request completed",
+        extra={"method": request.method, "path": request.url.path, "status_code": response.status_code, "duration_ms": duration_ms},
+    )
+    return response
+
+
+@app.middleware("http")
+async def rate_limit_placeholder_middleware(request: Request, call_next):
+    # Placeholder hook for future Redis/IP/account-aware throttling.
+    return await call_next(request)
 
 app.mount(
     "/static",

@@ -13,6 +13,21 @@ function setCartBadge(count) {
   });
 }
 
+function showToast(message) {
+  const toast = document.querySelector("[data-toast]");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.hidden = false;
+  toast.classList.add("is-visible");
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => {
+    toast.classList.remove("is-visible");
+    window.setTimeout(() => {
+      toast.hidden = true;
+    }, 180);
+  }, 2600);
+}
+
 async function refreshCartBadge() {
   const response = await fetch("/customer/cart/summary", {
     headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -120,13 +135,14 @@ document.addEventListener("submit", async (event) => {
       }, 1400);
     }
     showCartAddedNotice(addForm.dataset.productName);
+    showToast("Added to cart");
   } catch (error) {
     if (button) {
       button.classList.remove("is-adding", "is-added");
       button.disabled = false;
       button.textContent = originalText;
     }
-    alert("Unable to add this item to cart.");
+    showToast("Unable to add this item to cart.");
   }
 });
 
@@ -150,9 +166,20 @@ document.addEventListener("change", async (event) => {
       form.closest("[data-cart-row]")?.remove();
     }
     updateCartTotals(cart);
+    showToast("Cart updated");
   } catch (error) {
-    alert("Unable to update cart quantity.");
+    showToast("Unable to update cart quantity.");
   }
+});
+
+document.addEventListener("submit", (event) => {
+  const form = event.target.closest("form");
+  if (!form || form.matches(".inline-cart-form, .quantity-form, [data-cart-quantity-form]")) return;
+  const button = form.querySelector('button[type="submit"], button:not([type])');
+  if (!button) return;
+  button.dataset.originalText = button.textContent;
+  button.classList.add("is-loading");
+  button.textContent = "Working...";
 });
 
 refreshCartBadge().catch(() => {});

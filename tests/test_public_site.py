@@ -21,6 +21,31 @@ def test_public_marketing_pages_load() -> None:
             assert response.status_code == 200
             assert "Farmsource" in response.text
             assert "<meta name=\"description\"" in response.text
+            assert "Seattle" not in response.text
+
+
+def test_public_site_seo_and_ai_discovery_signals() -> None:
+    with TestClient(app) as client:
+        response = client.get("/")
+        assert response.status_code == 200
+        html = response.text
+        assert "<link rel=\"canonical\"" in html
+        assert "application/ld+json" in html
+        assert "nationwide farm-to-consumer marketplace" in html
+        assert "local produce" in html.lower()
+        assert "scheduled neighborhood delivery routes" in html
+        assert "href=\"/\">Home</a>" in html
+        assert "aria-label=\"Farmsource home\"" in html
+
+        robots = client.get("/robots.txt")
+        assert robots.status_code == 200
+        assert "Allow: /" in robots.text
+        assert "Sitemap:" in robots.text
+
+        sitemap = client.get("/sitemap.xml")
+        assert sitemap.status_code == 200
+        assert "<loc>http://testserver/</loc>" in sitemap.text
+        assert "<loc>http://testserver/waitlist</loc>" in sitemap.text
 
 
 def test_public_forms_save_leads() -> None:

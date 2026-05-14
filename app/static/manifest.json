@@ -1,9 +1,32 @@
 {
   "name": "Farmsource",
-  "short_name": "Farmsource",
-  "start_url": "/",
+  "short_name": "FarmSrc",
+  "description": "Mobile-first local produce ordering and delivery route app.",
+  "start_url": "/customer/catalog",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f7f5ef",
   "theme_color": "#2f6f4e",
-  "icons": []
+  "categories": ["food", "shopping", "business"],
+  "icons": [
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shop catalog",
+      "short_name": "Shop",
+      "url": "/customer/catalog"
+    },
+    {
+      "name": "Driver routes",
+      "short_name": "Routes",
+      "url": "/driver/routes"
+    }
+  ]
 }

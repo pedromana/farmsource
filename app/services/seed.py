@@ -4,8 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, Order, OrderItem, Producer, ProducerInterest, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source, WaitlistSignup
+from app.models import AdminUser, CartItem, CartSession, Customer, DeliveryWindow, Driver, DriverInterest, DriverPayout, MarketingContent, MarketingContentSchedule, Order, OrderItem, Producer, ProducerInterest, Product, ProductAvailability, ProductCategory, Route, RouteStop, Source, WaitlistSignup
 from app.services.auth import hash_password
+from app.services.ai_services.content_generator import generate_marketing_content
 from app.services.delivery import ensure_route_payout, refresh_route_estimates, sync_stop_from_order
 
 
@@ -28,6 +29,7 @@ def seed_sample_catalog(db: Session) -> None:
     if db.scalar(select(Product.id).limit(1)):
         _ensure_window_fields(db)
         _ensure_sample_public_leads(db)
+        _ensure_sample_marketing_content(db)
         _ensure_sample_customer_order(db)
         _ensure_sample_operations(db)
         return
@@ -168,6 +170,7 @@ def seed_sample_catalog(db: Session) -> None:
 
     db.commit()
     _ensure_sample_public_leads(db)
+    _ensure_sample_marketing_content(db)
     _ensure_sample_customer_order(db)
     _ensure_sample_operations(db)
 
@@ -299,6 +302,90 @@ def _ensure_sample_public_leads(db: Session) -> None:
                 availability_notes="Weekday evenings.",
                 territory_preference="North Seattle",
                 notes="Sample driver lead.",
+            )
+        )
+    db.commit()
+
+
+def _ensure_sample_marketing_content(db: Session) -> None:
+    if db.scalar(select(MarketingContent.id).limit(1)):
+        return
+    examples = [
+        {
+            "content_type": "produce_box",
+            "content_theme": "weekly produce boxes",
+            "title": "This Week's Produce Box Preview",
+            "target_platform": "instagram",
+            "target_audience": "customers",
+            "status": "ready_for_review",
+            "scheduled_date": datetime.now(UTC) + timedelta(days=1),
+            "notes": "Show a colorful farm box with greens, berries, herbs, and recipe inspiration.",
+        },
+        {
+            "content_type": "producer_spotlight",
+            "content_theme": "local farms",
+            "title": "Meet a Farmsource Producer",
+            "target_platform": "tiktok",
+            "target_audience": "producers",
+            "status": "generated",
+            "scheduled_date": datetime.now(UTC) + timedelta(days=2),
+            "notes": "Recruit local farms by showing how Farmsource can aggregate customer demand.",
+        },
+        {
+            "content_type": "launch_announcement",
+            "content_theme": "Seattle/local community",
+            "title": "Seattle Launch List Is Open",
+            "target_platform": "instagram",
+            "target_audience": "general",
+            "status": "draft",
+            "scheduled_date": datetime.now(UTC) + timedelta(days=3),
+            "notes": "Keep this local to Seattle launch marketing while the product remains nationwide-ready.",
+        },
+        {
+            "content_type": "driver_recruitment",
+            "content_theme": "behind-the-scenes delivery",
+            "title": "Run Planned Farmsource Routes",
+            "target_platform": "facebook",
+            "target_audience": "drivers",
+            "status": "approved",
+            "scheduled_date": datetime.now(UTC) + timedelta(days=4),
+            "notes": "Highlight predictable routes, packed orders, and manual route coordination.",
+        },
+    ]
+    for item in examples:
+        generated = generate_marketing_content(
+            item["content_type"],
+            item["content_theme"],
+            item["target_platform"],
+            item["target_audience"],
+            seed_title=item["title"],
+            notes=item["notes"],
+        )
+        content = MarketingContent(
+            content_type=item["content_type"],
+            content_theme=item["content_theme"],
+            title=generated.title,
+            short_description=generated.short_description,
+            ai_prompt=generated.ai_prompt,
+            generated_caption=generated.generated_caption,
+            generated_hashtags=generated.generated_hashtags,
+            generated_video_prompt=generated.generated_video_prompt,
+            generated_script=generated.generated_script,
+            target_platform=item["target_platform"],
+            target_audience=item["target_audience"],
+            status=item["status"],
+            scheduled_date=item["scheduled_date"],
+            approved=item["status"] == "approved",
+            notes=item["notes"],
+        )
+        db.add(content)
+        db.flush()
+        db.add(
+            MarketingContentSchedule(
+                marketing_content_id=content.id,
+                scheduled_date=item["scheduled_date"],
+                posting_platform=item["target_platform"],
+                posting_status="planned",
             )
         )
     db.commit()

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Marketing Content | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">AI marketing assistant</p>
+      <h1>{{ "Review content" if content.id else "Generate content" }}</h1>
+      <p>V1 generates drafts only. Admin approval is required before anything is manually posted outside Farmsource.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/marketing">Marketing dashboard</a>
+      <a class="button" href="/admin/marketing/calendar">Calendar</a>
+    </div>
+  </div>
+  <form class="form-grid" method="post" action="{{ '/admin/marketing/' ~ content.id if content.id else '/admin/marketing' }}">
+    <label>Title<input name="title" required value="{{ content.title or '' }}"></label>
+    <label>Theme<input name="content_theme" value="{{ content.content_theme or 'fresh produce' }}" placeholder="fresh produce, Seattle/local community, produce unboxing"></label>
+    <label>Content type<select name="content_type">{% for option in content_types %}<option value="{{ option }}" {% if content.content_type == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select></label>
+    <label>Target platform<select name="target_platform">{% for option in target_platforms %}<option value="{{ option }}" {% if content.target_platform == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select></label>
+    <label>Target audience<select name="target_audience">{% for option in target_audiences %}<option value="{{ option }}" {% if content.target_audience == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
+    <label>Status<select name="status">{% for option in content_statuses %}<option value="{{ option }}" {% if content.status == option %}selected{% endif %}>{{ option.replace("_", " ") }}</option>{% endfor %}</select></label>
+    <label>Scheduled date<input name="scheduled_date" type="datetime-local" value="{{ content.scheduled_date.strftime('%Y-%m-%dT%H:%M') if content.scheduled_date else '' }}"></label>
+    <label class="check-row"><input name="approved" type="checkbox" {% if content.approved %}checked{% endif %}> Approved for manual posting</label>
+    <label class="full">Short description<textarea name="short_description">{{ content.short_description or '' }}</textarea></label>
+    <label class="full">Planning notes<textarea name="notes">{{ content.notes or '' }}</textarea></label>
+    <label class="full">AI prompt<textarea name="ai_prompt">{{ content.ai_prompt or '' }}</textarea></label>
+    <label class="full">Generated caption<textarea name="generated_caption">{{ content.generated_caption or '' }}</textarea></label>
+    <label class="full">Generated hashtags<textarea name="generated_hashtags">{{ content.generated_hashtags or '' }}</textarea></label>
+    <label class="full">Generated video prompt<textarea name="generated_video_prompt">{{ content.generated_video_prompt or '' }}</textarea></label>
+    <label class="full">Generated short script<textarea name="generated_script">{{ content.generated_script or '' }}</textarea></label>
+    <label>Asset type<input name="asset_type" placeholder="reference, image, video"></label>
+    <label>Asset URL<input name="asset_url" placeholder="https://..."></label>
+    <label class="check-row full"><input name="generate" type="checkbox" {% if not content.id %}checked{% endif %}> Generate or regenerate draft fields from the mock AI service</label>
+    <div class="actions full">
+      <button class="primary" type="submit">Save content</button>
+      <a class="button" href="/admin/marketing">Cancel</a>
+    </div>
+  </form>
+  {% if content.id %}
+    <div class="marketing-preview-grid">
+      <article class="marketing-preview"><p class="eyebrow">Caption preview</p><h2>{{ content.title }}</h2><p>{{ content.generated_caption or "No caption generated." }}</p><p class="muted">{{ content.generated_hashtags or "" }}</p></article>
+      <article class="marketing-preview"><p class="eyebrow">Video prompt</p><p>{{ content.generated_video_prompt or "No video prompt generated." }}</p><p class="eyebrow">Script</p><p>{{ content.generated_script or "No script generated." }}</p></article>
+    </div>
+    <div class="actions marketing-workflow-actions">
+      <form method="post" action="/admin/marketing/{{ content.id }}/generate"><button type="submit">Regenerate</button></form>
+      <form method="post" action="/admin/marketing/{{ content.id }}/approve"><button class="primary" type="submit">Approve</button></form>
+      <form method="post" action="/admin/marketing/{{ content.id }}/reject"><button type="submit">Reject</button></form>
+      <form method="post" action="/admin/marketing/{{ content.id }}/mark-posted"><button type="submit">Mark manually posted</button></form>
+    </div>
+    <section class="dashboard-grid">
+      <article><h2>Assets</h2>{% for asset in content.assets %}<p><strong>{{ asset.asset_type }}</strong>: <a href="{{ asset.asset_url }}">{{ asset.asset_url }}</a></p>{% else %}<p>No assets attached.</p>{% endfor %}</article>
+      <article><h2>Schedules</h2>{% for schedule in content.schedules %}<p>{{ schedule.scheduled_date.strftime("%Y-%m-%d %H:%M") }} - {{ schedule.posting_platform.replace("_", " ") }} - {{ schedule.posting_status }}</p>{% else %}<p>No schedule set.</p>{% endfor %}</article>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}

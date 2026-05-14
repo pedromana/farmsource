@@ -2,6 +2,7 @@
 {% block title %}My Routes | Farmsource{% endblock %}
 {% block content %}
 <section class="driver-app">
+  <div class="app-page-bar driver-tabs"><a href="/driver/routes">Routes</a><a href="/driver/logout">Logout</a></div>
   <div class="driver-topbar">
     <div><p class="eyebrow">Signed in</p><h1>{{ driver.first_name }} {{ driver.last_name }}</h1></div>
     <a href="/driver/logout">Logout</a>
@@ -16,10 +17,10 @@
         </div>
         <div class="driver-progress"><span style="width: {{ progress.percent }}%"></span></div>
         <p>{{ progress.completed }}/{{ progress.total }} stops complete | Pay estimate ${{ "%.2f"|format(route.payout.total_pay if route.payout else route.route_pay + route.route_bonus) }}</p>
-        <a class="button primary" href="/driver/route/{{ route.id }}">Open route</a>
+        <a class="button primary touch-button" href="/driver/route/{{ route.id }}">Open route</a>
       </article>
     {% else %}
-      <article class="driver-card"><h2>No routes assigned</h2><p>Check with operations for your next scheduled route.</p></article>
+      <article class="driver-card empty-state"><h2>No routes assigned</h2><p>Check with operations for your next scheduled route.</p></article>
     {% endfor %}
   </div>
 </section>
