@@ -777,6 +777,8 @@ docker compose config --quiet
 
 Additional operator docs:
 
+- `LAUNCH_CHECKLIST.md`: production, Stripe, operations, outreach, and pilot readiness checklist for `farmsourcemarket.com`
+- `NEXT_7_DAY_PLAN.md`: one-week solo founder plan for production readiness and first producer outreach
 - `V1_TESTING_CHECKLIST.md`: manual and automated checks for local pilot testing
 - `V1_RELEASE_NOTES.md`: implemented v1 features, limitations, and next steps
 - `PILOT_PLAN.md`: first pilot rehearsal flow and manual fallback procedures
