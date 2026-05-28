@@ -1,4 +1,6 @@
+import csv
 from datetime import datetime
+from io import StringIO
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -7,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import BASE_DIR
+from app.config import BASE_DIR, get_settings
 from app.database import get_db
 from app.models import (
     Customer,
@@ -22,6 +24,7 @@ from app.models import (
     Order,
     Producer,
     ProducerInterest,
+    ProducerOutreachCandidate,
     Product,
     ProductAvailability,
     ProductCategory,
@@ -37,6 +40,7 @@ from app.services.classification import classify_producer_destination
 from app.services.csv_importer import import_producers_from_csv
 from app.services.delivery import assign_route_to_driver, ensure_route_payout, order_summary, refresh_route_estimates, route_driver_suggestions, route_progress, sync_stop_from_order
 from app.services.exporter import availability_to_excel, completed_routes_to_excel, customers_to_excel, delivery_summary_to_excel, delivery_windows_to_excel, driver_interests_to_excel, driver_payouts_to_excel, drivers_to_excel, marketing_content_to_excel, orders_to_excel, producer_interests_to_excel, producers_to_excel, products_to_excel, route_manifest_to_excel, routes_to_excel, waitlist_to_excel
+from app.services.outreach import COMPLETED_RESEARCH_STATUSES, LOCKED_RESEARCH_STATUSES, OUTREACH_STATUSES, REGION_PROFILES, RESEARCH_STATUSES, generate_outreach_email, normalize_outreach_csv, research_candidate_now, research_next_candidates
 from app.services.ai_services.content_generator import CONTENT_STATUSES, CONTENT_TYPES, POSTING_STATUSES, TARGET_AUDIENCES, TARGET_PLATFORMS, generate_marketing_content
 
 
@@ -854,6 +858,326 @@ async def import_csv(
     content = await file.read()
     summary = import_producers_from_csv(db, _optional_int(source_id), file.filename, content)
     return RedirectResponse(f"/admin/imports?import_run_id={summary.import_run_id}", status_code=303)
+
+
+@router.get("/outreach")
+def outreach_dashboard(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    region: str = "seattle",
+    status: str | None = None,
+    research_status: str | None = None,
+    summary: str | None = None,
+):
+    query = select(ProducerOutreachCandidate).where(ProducerOutreachCandidate.region == region)
+    if status:
+        query = query.where(ProducerOutreachCandidate.outreach_status == status)
+    if research_status:
+        query = query.where(ProducerOutreachCandidate.research_status == research_status)
+    candidates = db.scalars(
+        query.order_by(ProducerOutreachCandidate.priority_rank, ProducerOutreachCandidate.priority_score.desc()).limit(250)
+    ).all()
+    status_counts = db.execute(
+        select(ProducerOutreachCandidate.outreach_status, func.count(ProducerOutreachCandidate.id))
+        .where(ProducerOutreachCandidate.region == region)
+        .group_by(ProducerOutreachCandidate.outreach_status)
+    ).all()
+    progress = _outreach_progress(db, region)
+    return templates.TemplateResponse(
+        "admin_outreach.html",
+        {
+            "request": request,
+            "candidates": candidates,
+            "regions": REGION_PROFILES,
+            "selected_region": region,
+            "outreach_statuses": OUTREACH_STATUSES,
+            "research_statuses": RESEARCH_STATUSES,
+            "filters": {"status": status or "", "research_status": research_status or ""},
+            "summary": summary,
+            "status_counts": status_counts,
+            "progress": progress,
+            "local_research_enabled": _local_research_enabled(),
+        },
+    )
+
+
+@router.post("/outreach/import")
+async def import_outreach_csv(
+    db: Annotated[Session, Depends(get_db)],
+    source_name: Annotated[str, Form()] = "",
+    region: Annotated[str, Form()] = "seattle",
+    active_status_only: Annotated[str | None, Form()] = None,
+    state_filter: Annotated[str | None, Form()] = None,
+    clear_existing_region: Annotated[str | None, Form()] = None,
+    file: Annotated[UploadFile, File()] = None,
+):
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="CSV file is required")
+    if region not in REGION_PROFILES:
+        raise HTTPException(status_code=400, detail="Unsupported region")
+    content = await file.read()
+    summary = normalize_outreach_csv(
+        db,
+        content=content,
+        filename=file.filename,
+        source_name=source_name or file.filename,
+        region=region,
+        active_status_only=active_status_only == "on",
+        state_filter=_optional(state_filter),
+        clear_existing_region=clear_existing_region == "on",
+    )
+    message = (
+        f"Imported {summary.imported_rows} producers and created {summary.candidate_count} ranked outreach candidates "
+        f"for {REGION_PROFILES[region]['label']}."
+    )
+    return RedirectResponse(f"/admin/outreach?region={region}&summary={message}", status_code=303)
+
+
+@router.get("/outreach/progress")
+def outreach_progress(db: Annotated[Session, Depends(get_db)], region: str = "seattle"):
+    return _outreach_progress(db, region)
+
+
+@router.get("/outreach/updates")
+def outreach_updates(
+    db: Annotated[Session, Depends(get_db)],
+    region: str = "seattle",
+    status: str | None = None,
+    research_status: str | None = None,
+):
+    query = select(ProducerOutreachCandidate).where(ProducerOutreachCandidate.region == region)
+    if status:
+        query = query.where(ProducerOutreachCandidate.outreach_status == status)
+    if research_status:
+        query = query.where(ProducerOutreachCandidate.research_status == research_status)
+    candidates = db.scalars(
+        query.order_by(ProducerOutreachCandidate.priority_rank, ProducerOutreachCandidate.priority_score.desc()).limit(250)
+    ).all()
+    return {"progress": _outreach_progress(db, region), "candidates": [_candidate_payload(candidate) for candidate in candidates]}
+
+
+@router.get("/outreach/candidates/{candidate_id}")
+def outreach_candidate_detail(candidate_id: int, db: Annotated[Session, Depends(get_db)]):
+    candidate = db.get(ProducerOutreachCandidate, candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Outreach candidate not found")
+    return {"candidate": _candidate_payload(candidate), "progress": _outreach_progress(db, candidate.region)}
+
+
+@router.get("/outreach/candidates/{candidate_id}/email-suggestion")
+def outreach_email_suggestion(candidate_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    candidate = db.get(ProducerOutreachCandidate, candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Outreach candidate not found")
+    if not candidate.contact_email:
+        raise HTTPException(status_code=400, detail="Candidate does not have an email address")
+    email = generate_outreach_email(candidate)
+    return templates.TemplateResponse(
+        "admin_outreach_email.html",
+        {"request": request, "candidate": candidate, "email": email},
+    )
+
+
+@router.post("/outreach/candidates/{candidate_id}/research")
+def request_outreach_research(candidate_id: int, db: Annotated[Session, Depends(get_db)]):
+    _require_local_research()
+    candidate = db.get(ProducerOutreachCandidate, candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Outreach candidate not found")
+    already_completed = candidate.research_status in LOCKED_RESEARCH_STATUSES
+    research_candidate_now(candidate)
+    if candidate.producer_id:
+        producer = db.get(Producer, candidate.producer_id)
+        if producer:
+            producer.website_url = candidate.website_url or producer.website_url
+            producer.contact_email = candidate.contact_email or producer.contact_email
+            producer.contact_phone = candidate.contact_phone or producer.contact_phone
+            producer.instagram_url = candidate.instagram_url or producer.instagram_url
+            producer.facebook_url = candidate.facebook_url or producer.facebook_url
+            producer.notes = candidate.notes or producer.notes
+    db.commit()
+    db.refresh(candidate)
+    return {
+        "candidate": _candidate_payload(candidate),
+        "progress": _outreach_progress(db, candidate.region),
+        "already_completed": already_completed,
+    }
+
+
+@router.post("/outreach/research-all")
+def research_next_outreach_candidates(
+    db: Annotated[Session, Depends(get_db)],
+    region: Annotated[str, Form()] = "seattle",
+    status: Annotated[str | None, Form()] = None,
+    research_status: Annotated[str | None, Form()] = None,
+):
+    _require_local_research()
+    candidates = research_next_candidates(db, region)
+    db.commit()
+    refreshed = db.scalars(
+        select(ProducerOutreachCandidate)
+        .where(ProducerOutreachCandidate.region == region)
+        .order_by(ProducerOutreachCandidate.priority_rank, ProducerOutreachCandidate.priority_score.desc())
+        .limit(250)
+    ).all()
+    return {
+        "researched": len(candidates),
+        "progress": _outreach_progress(db, region),
+        "candidates": [_candidate_payload(candidate) for candidate in refreshed],
+    }
+
+
+@router.post("/outreach/candidates/{candidate_id}")
+async def update_outreach_candidate(
+    candidate_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+):
+    candidate = db.get(ProducerOutreachCandidate, candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Outreach candidate not found")
+    form = await request.form()
+    candidate.outreach_status = str(form.get("outreach_status") or candidate.outreach_status)
+    candidate.research_status = str(form.get("research_status") or candidate.research_status)
+    candidate.website_url = _optional(form.get("website_url"))
+    candidate.contact_email = _optional(form.get("contact_email"))
+    candidate.contact_phone = _optional(form.get("contact_phone"))
+    candidate.instagram_url = _optional(form.get("instagram_url"))
+    candidate.facebook_url = _optional(form.get("facebook_url"))
+    candidate.next_step = _optional(form.get("next_step"))
+    candidate.notes = _optional(form.get("notes"))
+    if candidate.producer_id:
+        producer = db.get(Producer, candidate.producer_id)
+        if producer:
+            producer.website_url = candidate.website_url or producer.website_url
+            producer.contact_email = candidate.contact_email or producer.contact_email
+            producer.contact_phone = candidate.contact_phone or producer.contact_phone
+            producer.instagram_url = candidate.instagram_url or producer.instagram_url
+            producer.facebook_url = candidate.facebook_url or producer.facebook_url
+    db.commit()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        db.refresh(candidate)
+        return {"candidate": _candidate_payload(candidate), "progress": _outreach_progress(db, candidate.region)}
+    return RedirectResponse(f"/admin/outreach?region={candidate.region}", status_code=303)
+
+
+@router.get("/outreach/export")
+def export_outreach_candidates(db: Annotated[Session, Depends(get_db)], region: str = "seattle"):
+    output = StringIO()
+    fieldnames = [
+        "priority_rank",
+        "priority_score",
+        "producer_name",
+        "city",
+        "state",
+        "zip_code",
+        "producer_type",
+        "ubi",
+        "registered_agent",
+        "principal_office_address",
+        "website_url",
+        "contact_email",
+        "contact_phone",
+        "instagram_url",
+        "facebook_url",
+        "outreach_status",
+        "research_status",
+        "search_url",
+        "next_step",
+        "priority_reason",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    rows = db.scalars(
+        select(ProducerOutreachCandidate)
+        .where(ProducerOutreachCandidate.region == region)
+        .order_by(ProducerOutreachCandidate.priority_rank, ProducerOutreachCandidate.priority_score.desc())
+    ).all()
+    for candidate in rows:
+        writer.writerow({field: getattr(candidate, field) for field in fieldnames})
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="farmsource-outreach-{region}.csv"'},
+    )
+
+
+def _outreach_progress(db: Session, region: str) -> dict:
+    total = db.scalar(select(func.count(ProducerOutreachCandidate.id)).where(ProducerOutreachCandidate.region == region)) or 0
+    researched = (
+        db.scalar(
+            select(func.count(ProducerOutreachCandidate.id)).where(
+                ProducerOutreachCandidate.region == region,
+                ProducerOutreachCandidate.research_status.in_(COMPLETED_RESEARCH_STATUSES),
+            )
+        )
+        or 0
+    )
+    researching = (
+        db.scalar(
+            select(func.count(ProducerOutreachCandidate.id)).where(
+                ProducerOutreachCandidate.region == region,
+                ProducerOutreachCandidate.research_status.not_in(COMPLETED_RESEARCH_STATUSES),
+            )
+        )
+        or 0
+    )
+    found_contact = (
+        db.scalar(
+            select(func.count(ProducerOutreachCandidate.id)).where(
+                ProducerOutreachCandidate.region == region,
+                ProducerOutreachCandidate.research_status == "found_contact",
+            )
+        )
+        or 0
+    )
+    percent = round((researched / total) * 100, 1) if total else 0
+    queued_percent = percent
+    remaining = max(total - researched, 0)
+    return {
+        "region": region,
+        "total": total,
+        "researched": researched,
+        "researching": researching,
+        "found_contact": found_contact,
+        "remaining": remaining,
+        "percent": percent,
+        "queued_percent": queued_percent,
+    }
+
+
+def _candidate_payload(candidate: ProducerOutreachCandidate) -> dict:
+    return {
+        "id": candidate.id,
+        "priority_rank": candidate.priority_rank,
+        "priority_score": candidate.priority_score,
+        "producer_name": candidate.producer_name,
+        "city": candidate.city,
+        "state": candidate.state,
+        "zip_code": candidate.zip_code,
+        "producer_type": candidate.producer_type,
+        "website_url": candidate.website_url,
+        "contact_email": candidate.contact_email,
+        "contact_phone": candidate.contact_phone,
+        "instagram_url": candidate.instagram_url,
+        "facebook_url": candidate.facebook_url,
+        "outreach_status": candidate.outreach_status,
+        "research_status": candidate.research_status,
+        "search_url": candidate.search_url,
+        "next_step": candidate.next_step,
+        "notes": candidate.notes,
+        "priority_reason": candidate.priority_reason,
+    }
+
+
+def _local_research_enabled() -> bool:
+    return get_settings().app_env.lower() in {"local", "development", "dev", "test"}
+
+
+def _require_local_research() -> None:
+    if not _local_research_enabled():
+        raise HTTPException(status_code=403, detail="Research queue actions are local-only.")
 
 
 @router.get("/producers")

@@ -67,6 +67,8 @@ farmsource/
 
 ## Local setup
 
+Local setup remains supported, but remote development on a Linux server is now the recommended daily workflow so Windows does not need to run the full stack. See `REMOTE_DEV_SETUP.md` for the server-based Docker Compose workflow with Postgres, SSH tunneling, IDE setup, logs, tests, and troubleshooting.
+
 Create a virtual environment and install dependencies:
 
 ```bash

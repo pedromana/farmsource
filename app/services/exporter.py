@@ -1,3 +1,4 @@
+from datetime import datetime
 from io import BytesIO
 
 import pandas as pd
@@ -33,6 +34,20 @@ EXPORT_COLUMNS = [
     "contact_phone",
     "notes",
 ]
+
+
+def _excel_safe_value(value):
+    if isinstance(value, pd.Timestamp):
+        if value.tzinfo is not None:
+            return value.tz_localize(None)
+        return value
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.replace(tzinfo=None)
+    return value
+
+
+def _excel_safe_rows(rows: list[dict]) -> list[dict]:
+    return [{key: _excel_safe_value(value) for key, value in row.items()} for row in rows]
 
 
 def producers_to_excel(db: Session, query: Select[tuple[Producer]] | None = None) -> BytesIO:
@@ -110,7 +125,7 @@ def availability_to_excel(db: Session, query: Select[tuple[ProductAvailability]]
     ]
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        pd.DataFrame(rows).to_excel(writer, index=False, sheet_name="availability")
+        pd.DataFrame(_excel_safe_rows(rows)).to_excel(writer, index=False, sheet_name="availability")
     output.seek(0)
     return output
 
@@ -118,7 +133,7 @@ def availability_to_excel(db: Session, query: Select[tuple[ProductAvailability]]
 def rows_to_excel(rows: list[dict], sheet_name: str) -> BytesIO:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        pd.DataFrame(rows).to_excel(writer, index=False, sheet_name=sheet_name[:31])
+        pd.DataFrame(_excel_safe_rows(rows)).to_excel(writer, index=False, sheet_name=sheet_name[:31])
     output.seek(0)
     return output
 

@@ -172,7 +172,247 @@ document.addEventListener("change", async (event) => {
   }
 });
 
+function updateOutreachProgress(progress) {
+  if (!progress) return;
+  const percent = document.querySelector("[data-outreach-progress-percent]");
+  const researched = document.querySelector("[data-outreach-researched]");
+  const researchedInline = document.querySelector("[data-outreach-researched-inline]");
+  const total = document.querySelector("[data-outreach-total]");
+  const researching = document.querySelector("[data-outreach-researching]");
+  const researchingInline = document.querySelector("[data-outreach-researching-inline]");
+  const remaining = document.querySelector("[data-outreach-remaining]");
+  const foundContact = document.querySelector("[data-outreach-found-contact]");
+  const queuedPercent = document.querySelector("[data-outreach-queued-percent]");
+  const queueMessage = document.querySelector("[data-outreach-queue-message]");
+  const bar = document.querySelector("[data-outreach-progress-bar]");
+  if (percent) percent.textContent = `${progress.percent}%`;
+  if (researched) researched.textContent = String(progress.researched || 0);
+  if (researchedInline) researchedInline.textContent = String(progress.researched || 0);
+  if (total) total.textContent = String(progress.total || 0);
+  if (researching) researching.textContent = String(progress.researching || 0);
+  if (researchingInline) researchingInline.textContent = String(progress.researching || 0);
+  if (remaining) remaining.textContent = String(progress.remaining || 0);
+  if (foundContact) foundContact.textContent = String(progress.found_contact || 0);
+  if (queuedPercent) queuedPercent.textContent = String(progress.queued_percent || 0);
+  if (bar) bar.style.width = `${progress.percent || 0}%`;
+  if (queueMessage) {
+    if ((progress.researching || 0) > 0) {
+      queueMessage.textContent = "Use Research next 10 to research and save the next batch immediately. Use Research now on a row for a specific farm.";
+    } else if ((progress.remaining || 0) === 0) {
+      queueMessage.textContent = "There are no remaining candidates to research.";
+    } else {
+      queueMessage.textContent = "Use Research next 10 to research and save a batch immediately.";
+    }
+  }
+}
+
+function updateOutreachRow(candidate) {
+  if (!candidate) return;
+  const row = document.querySelector(`[data-outreach-row="${candidate.id}"]`);
+  if (!row) return;
+  row.classList.add("is-updating");
+  window.setTimeout(() => row.classList.remove("is-updating"), 700);
+
+  const researchStatus = row.querySelector("[data-research-status]");
+  if (researchStatus) researchStatus.textContent = candidate.research_status || "";
+  const researchButton = row.querySelector("[data-research-button]");
+  const completedStatuses = ["found_contact", "verified"];
+  if (researchButton && completedStatuses.includes(candidate.research_status)) {
+    researchButton.disabled = true;
+    researchButton.textContent = "Researched";
+  } else if (researchButton && candidate.research_status === "no_contact_found") {
+    researchButton.disabled = false;
+    researchButton.textContent = "Research again";
+  } else if (researchButton) {
+    researchButton.disabled = false;
+    researchButton.textContent = "Research now";
+  }
+
+  const email = row.querySelector("[data-contact-email]");
+  const phone = row.querySelector("[data-contact-phone]");
+  if (email) email.textContent = candidate.contact_email || "";
+  if (phone) phone.textContent = candidate.contact_phone || "";
+
+  const contactCell = row.querySelector("[data-contact-cell]");
+  if (contactCell && candidate.website_url && !contactCell.querySelector("[data-website-link]")) {
+    const link = document.createElement("a");
+    link.dataset.websiteLink = "true";
+    link.href = candidate.website_url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Website";
+    contactCell.prepend(document.createElement("br"));
+    contactCell.prepend(link);
+  }
+  if (contactCell && candidate.instagram_url && !contactCell.querySelector("[data-instagram-link]")) {
+    const link = document.createElement("a");
+    link.dataset.instagramLink = "true";
+    link.href = candidate.instagram_url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Instagram";
+    contactCell.prepend(document.createElement("br"));
+    contactCell.prepend(link);
+  }
+  if (contactCell && candidate.facebook_url && !contactCell.querySelector("[data-facebook-link]")) {
+    const link = document.createElement("a");
+    link.dataset.facebookLink = "true";
+    link.href = candidate.facebook_url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Facebook";
+    contactCell.prepend(document.createElement("br"));
+    contactCell.prepend(link);
+  }
+  if (
+    contactCell &&
+    candidate.contact_email &&
+    ["found_contact", "verified"].includes(candidate.research_status) &&
+    !contactCell.querySelector("[data-email-draft-link]")
+  ) {
+    const link = document.createElement("a");
+    link.className = "button";
+    link.dataset.emailDraftLink = "true";
+    link.href = `/admin/outreach/candidates/${candidate.id}/email-suggestion`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Email draft";
+    contactCell.append(document.createElement("br"), link);
+  }
+
+  const form = row.querySelector("[data-outreach-form]");
+  if (!form) return;
+  const values = {
+    outreach_status: candidate.outreach_status,
+    research_status: candidate.research_status,
+    website_url: candidate.website_url,
+    contact_email: candidate.contact_email,
+    contact_phone: candidate.contact_phone,
+    instagram_url: candidate.instagram_url,
+    facebook_url: candidate.facebook_url,
+    next_step: candidate.next_step,
+    notes: candidate.notes,
+  };
+  Object.entries(values).forEach(([name, value]) => {
+    const field = form.elements[name];
+    if (field && document.activeElement !== field) field.value = value || "";
+  });
+}
+
+async function requestCandidateResearch(button) {
+  const candidateId = button.dataset.candidateId;
+  if (!candidateId) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Researching...";
+  try {
+    const response = await fetch(`/admin/outreach/candidates/${candidateId}/research`, {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!response.ok) throw new Error("Research request failed");
+    const data = await response.json();
+    updateOutreachRow(data.candidate);
+    updateOutreachProgress(data.progress);
+    showToast(data.already_completed ? "Research was already completed" : "Research completed");
+  } catch (error) {
+    showToast("Unable to request research.");
+    button.disabled = false;
+    button.textContent = originalText || "Research now";
+  }
+}
+
+async function requestAllCandidateResearch(button) {
+  const page = document.querySelector("[data-outreach-page]");
+  if (!page) return;
+  button.disabled = true;
+  button.dataset.originalText = button.textContent;
+  button.textContent = "Researching 10...";
+  const formData = new FormData();
+  formData.set("region", page.dataset.region || "seattle");
+  try {
+    const response = await fetch("/admin/outreach/research-all", {
+      method: "POST",
+      body: formData,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!response.ok) throw new Error("Research all request failed");
+    const data = await response.json();
+    updateOutreachProgress(data.progress);
+    (data.candidates || []).forEach(updateOutreachRow);
+    showToast(`${data.researched || 0} farms researched`);
+  } catch (error) {
+    showToast("Unable to research batch.");
+  } finally {
+    button.disabled = false;
+    button.textContent = button.dataset.originalText || "Research next 10";
+  }
+}
+
+async function submitOutreachForm(form) {
+  const response = await fetch(form.action, {
+    method: "POST",
+    body: new FormData(form),
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+  });
+  if (!response.ok) throw new Error("Save failed");
+  return response.json();
+}
+
+async function refreshOutreachUpdates() {
+  const page = document.querySelector("[data-outreach-page]");
+  if (!page) return;
+  const params = new URLSearchParams();
+  params.set("region", page.dataset.region || "seattle");
+  if (page.dataset.statusFilter) params.set("status", page.dataset.statusFilter);
+  if (page.dataset.researchFilter) params.set("research_status", page.dataset.researchFilter);
+  const response = await fetch(`/admin/outreach/updates?${params}`, {
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+  });
+  if (!response.ok) return;
+  const data = await response.json();
+  updateOutreachProgress(data.progress);
+  (data.candidates || []).forEach(updateOutreachRow);
+}
+
+document.addEventListener("click", (event) => {
+  const allButton = event.target.closest("[data-research-all-button]");
+  if (allButton) {
+    requestAllCandidateResearch(allButton);
+    return;
+  }
+  const button = event.target.closest("[data-research-button]");
+  if (!button) return;
+  requestCandidateResearch(button);
+});
+
+document.addEventListener("submit", async (event) => {
+  const form = event.target.closest("[data-outreach-form]");
+  if (!form) return;
+  event.preventDefault();
+  const button = form.querySelector('button[type="submit"]');
+  if (button) {
+    button.disabled = true;
+    button.dataset.originalText = button.textContent;
+    button.textContent = "Saving...";
+  }
+  try {
+    const data = await submitOutreachForm(form);
+    updateOutreachRow(data.candidate);
+    updateOutreachProgress(data.progress);
+    showToast("Outreach candidate saved");
+  } catch (error) {
+    showToast("Unable to save outreach candidate.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = button.dataset.originalText || "Save";
+    }
+  }
+});
+
 document.addEventListener("submit", (event) => {
+  if (event.defaultPrevented) return;
   const form = event.target.closest("form");
   if (!form || form.matches(".inline-cart-form, .quantity-form, [data-cart-quantity-form]")) return;
   const button = form.querySelector('button[type="submit"], button:not([type])');
@@ -183,3 +423,7 @@ document.addEventListener("submit", (event) => {
 });
 
 refreshCartBadge().catch(() => {});
+if (document.querySelector("[data-outreach-page]")) {
+  refreshOutreachUpdates().catch(() => {});
+  window.setInterval(() => refreshOutreachUpdates().catch(() => {}), 5000);
+}

@@ -30,7 +30,31 @@ PUBLIC_PATHS = tuple(PUBLIC_META.keys())
 
 @router.get("/", response_class=HTMLResponse)
 def landing_page(request: Request) -> HTMLResponse:
-    return _public_template(request, "public_home.html", "/")
+    return _temporary_landing_template(request, submitted=None)
+
+
+@router.post("/launch-contact")
+def submit_launch_contact(
+    db: Annotated[Session, Depends(get_db)],
+    name: Annotated[str, Form()],
+    email: Annotated[str, Form()],
+    phone: Annotated[str | None, Form()] = None,
+    reason: Annotated[str | None, Form()] = None,
+):
+    if not _required(name) or not _required(email):
+        raise HTTPException(status_code=400, detail="Name and email are required")
+    db.add(
+        WaitlistSignup(
+            signup_type="launch_contact",
+            first_name=name.strip(),
+            email=email.strip().lower(),
+            phone=_optional(phone),
+            notes=_optional(reason),
+            source_page="/",
+        )
+    )
+    db.commit()
+    return RedirectResponse("/?submitted=contact", status_code=303)
 
 
 @router.get("/how-it-works", response_class=HTMLResponse)
@@ -88,6 +112,11 @@ def sitemap_xml(request: Request) -> Response:
     )
     content = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}\n</urlset>\n'
     return Response(content=content, media_type="application/xml")
+
+
+@router.get("/full-site", response_class=HTMLResponse)
+def full_site_home(request: Request) -> HTMLResponse:
+    return _public_template(request, "public_home.html", "/")
 
 
 @router.get("/customer", response_class=HTMLResponse)
@@ -229,6 +258,24 @@ def _public_template(request: Request, template_name: str, path: str, context: d
     if context:
         payload.update(context)
     return templates.TemplateResponse(template_name, payload)
+
+
+def _temporary_landing_template(request: Request, submitted: str | None = None):
+    title = "Farmsource Market | Local Farm Delivery Network"
+    description = (
+        "Farmsource Market is building a scheduled local delivery network that helps customers discover fresh regional "
+        "produce and helps farms reach nearby households."
+    )
+    return templates.TemplateResponse(
+        "temporary_landing.html",
+        {
+            "request": request,
+            "submitted": submitted or request.query_params.get("submitted"),
+            "seo_title": title,
+            "meta_description": description,
+            "canonical_url": str(request.url_for("landing_page")),
+        },
+    )
 
 
 def _required(value: str | None) -> bool:

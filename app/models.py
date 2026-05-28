@@ -48,6 +48,8 @@ class Producer(Base, TimestampMixin):
     classification_reason: Mapped[str | None] = mapped_column(Text)
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_phone: Mapped[str | None] = mapped_column(String(80))
+    instagram_url: Mapped[str | None] = mapped_column(String(500))
+    facebook_url: Mapped[str | None] = mapped_column(String(500))
     notes: Mapped[str | None] = mapped_column(Text)
 
     source: Mapped[Source | None] = relationship(back_populates="producers")
@@ -103,6 +105,39 @@ class ImportErrorRow(Base):
     raw_data: Mapped[str | None] = mapped_column(Text)
 
     import_run: Mapped[ImportRun] = relationship(back_populates="error_rows")
+
+
+class ProducerOutreachCandidate(Base, TimestampMixin):
+    __tablename__ = "producer_outreach_candidates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    source_id: Mapped[int | None] = mapped_column(ForeignKey("sources.id"), index=True)
+    import_run_id: Mapped[int | None] = mapped_column(ForeignKey("import_runs.id"), index=True)
+    producer_id: Mapped[int | None] = mapped_column(ForeignKey("producers.id"), index=True)
+    region: Mapped[str] = mapped_column(String(120), default="seattle", nullable=False, index=True)
+    priority_rank: Mapped[int | None] = mapped_column(Integer, index=True)
+    priority_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    producer_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    business_name: Mapped[str | None] = mapped_column(String(255))
+    city: Mapped[str | None] = mapped_column(String(120), index=True)
+    state: Mapped[str | None] = mapped_column(String(40), index=True)
+    zip_code: Mapped[str | None] = mapped_column(String(20))
+    producer_type: Mapped[str | None] = mapped_column(String(120))
+    ubi: Mapped[str | None] = mapped_column(String(80), index=True)
+    registered_agent: Mapped[str | None] = mapped_column(String(255))
+    principal_office_address: Mapped[str | None] = mapped_column(String(500))
+    website_url: Mapped[str | None] = mapped_column(String(500))
+    contact_email: Mapped[str | None] = mapped_column(String(255))
+    contact_phone: Mapped[str | None] = mapped_column(String(80))
+    instagram_url: Mapped[str | None] = mapped_column(String(500))
+    facebook_url: Mapped[str | None] = mapped_column(String(500))
+    outreach_status: Mapped[str] = mapped_column(String(40), default="prospect", nullable=False, index=True)
+    research_status: Mapped[str] = mapped_column(String(40), default="not_started", nullable=False, index=True)
+    search_url: Mapped[str | None] = mapped_column(String(1000))
+    priority_reason: Mapped[str | None] = mapped_column(Text)
+    next_step: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+    raw_data: Mapped[str | None] = mapped_column(Text)
 
 
 class ProductCategory(Base, TimestampMixin):

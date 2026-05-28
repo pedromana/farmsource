@@ -58,10 +58,29 @@ def _migrate_legacy_sqlite_schema() -> None:
     product_columns = set()
     if "products" in table_names:
         product_columns = {column["name"] for column in inspector.get_columns("products")}
+    outreach_columns = set()
+    if "producer_outreach_candidates" in table_names:
+        outreach_columns = {column["name"] for column in inspector.get_columns("producer_outreach_candidates")}
 
     with engine.begin() as connection:
         if "producers" in table_names and "producer_name" not in producer_columns:
             connection.execute(text("DROP TABLE IF EXISTS producers"))
+        if "producers" in table_names:
+            producer_additions = {
+                "instagram_url": "VARCHAR(500)",
+                "facebook_url": "VARCHAR(500)",
+            }
+            for column_name, ddl in producer_additions.items():
+                if column_name not in producer_columns:
+                    connection.execute(text(f"ALTER TABLE producers ADD COLUMN {column_name} {ddl}"))
+        if "producer_outreach_candidates" in table_names:
+            outreach_additions = {
+                "instagram_url": "VARCHAR(500)",
+                "facebook_url": "VARCHAR(500)",
+            }
+            for column_name, ddl in outreach_additions.items():
+                if column_name not in outreach_columns:
+                    connection.execute(text(f"ALTER TABLE producer_outreach_candidates ADD COLUMN {column_name} {ddl}"))
         if "products" in table_names and "producer_id" not in product_columns:
             connection.execute(text("DROP TABLE IF EXISTS products"))
         if "delivery_windows" in table_names:

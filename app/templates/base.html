@@ -17,8 +17,8 @@
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/static/icons/icon.svg">
-    <link rel="preload" href="/static/css/styles.css" as="style">
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="preload" href="/static/css/styles.css?v=9" as="style">
+    <link rel="stylesheet" href="/static/css/styles.css?v=9">
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -91,7 +91,7 @@
       </nav>
     {% endif %}
     <div class="toast" data-toast hidden></div>
-    <script src="/static/js/app.js" defer></script>
+    <script src="/static/js/app.js?v=9" defer></script>
     {% if current_path.startswith("/customer") %}
     <dialog class="cart-ready-dialog" data-cart-dialog>
       <form method="dialog">

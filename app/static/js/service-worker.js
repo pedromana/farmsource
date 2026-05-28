@@ -1,4 +1,4 @@
-const CACHE_NAME = "farmsource-static-v1";
+const CACHE_NAME = "farmsource-static-v9";
 const STATIC_ASSETS = [
   "/static/css/styles.css",
   "/static/js/app.js",

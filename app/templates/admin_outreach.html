@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Producer Outreach | Farmsource{% endblock %}
+{% block content %}
+<section class="workspace wide" data-outreach-page data-region="{{ selected_region }}" data-status-filter="{{ filters.status }}" data-research-filter="{{ filters.research_status }}">
+  <div class="page-heading row-heading">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Producer outreach</h1>
+      <p>Normalize producer CSVs, rank outreach candidates by region, and track contact research before producer outreach.</p>
+    </div>
+    <div class="actions">
+      <a class="button" href="/admin/producers">Producers</a>
+      {% if local_research_enabled %}
+        <button class="button" type="button" data-research-all-button>Research next 10</button>
+      {% endif %}
+      <a class="button primary" href="/admin/outreach/export?region={{ selected_region }}">Export candidates</a>
+    </div>
+  </div>
+
+  {% if summary %}
+    <article class="summary-card"><p>{{ summary }}</p></article>
+  {% endif %}
+
+  <form class="form-grid panel" method="post" action="/admin/outreach/import" enctype="multipart/form-data">
+    <label>Source name
+      <input name="source_name" placeholder="Washington Secretary of State farms">
+    </label>
+    <label>Region
+      <select name="region">
+        {% for key, profile in regions.items() %}
+          <option value="{{ key }}" {% if selected_region == key %}selected{% endif %}>{{ profile.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>State filter
+      <input name="state_filter" value="WA" placeholder="WA">
+    </label>
+    <label>CSV file
+      <input name="file" type="file" accept=".csv,text/csv" required>
+    </label>
+    <label class="checkbox-line"><input name="active_status_only" type="checkbox" checked> Active status only</label>
+    <label class="checkbox-line"><input name="clear_existing_region" type="checkbox"> Replace existing candidates for this region</label>
+    <div class="actions full"><button class="primary" type="submit">Normalize and rank CSV</button></div>
+  </form>
+
+  <div class="dashboard-grid">
+    <article>
+      <h2>Research progress</h2>
+      <div class="outreach-stats">
+        <div>
+          <strong data-outreach-researched>{{ progress.researched }}</strong>
+          <span>researched</span>
+        </div>
+        <div>
+          <strong data-outreach-found-contact>{{ progress.found_contact }}</strong>
+          <span>contacts found</span>
+        </div>
+        <div>
+          <strong data-outreach-researching>{{ progress.researching }}</strong>
+          <span>remaining</span>
+        </div>
+      </div>
+      <div class="progress-meter" aria-label="Research progress">
+        <span data-outreach-progress-bar style="width: {{ progress.percent }}%"></span>
+      </div>
+      <p><strong data-outreach-progress-percent>{{ progress.percent }}%</strong> completed</p>
+      <p><span data-outreach-researched-inline>{{ progress.researched }}</span> of <span data-outreach-total>{{ progress.total }}</span> candidates have completed research.</p>
+      <p><span data-outreach-researching-inline>{{ progress.researching }}</span> remaining for local research.</p>
+      <p class="muted" data-outreach-queue-message>
+        {% if progress.researching > 0 %}
+          Use Research next 10 to research and save the next batch immediately. Use Research now on a row for a specific farm.
+        {% elif progress.remaining == 0 %}
+          There are no remaining candidates to research.
+        {% else %}
+          Use Research next 10 to research and save a batch immediately.
+        {% endif %}
+      </p>
+    </article>
+    <article>
+      <h2>Status counts</h2>
+      {% for status, count in status_counts %}
+        <p><strong>{{ status }}</strong>: {{ count }}</p>
+      {% else %}
+        <p>No candidates yet.</p>
+      {% endfor %}
+    </article>
+    <article>
+      <h2>Contact research workflow</h2>
+      <p>The research buttons run a lightweight local web lookup, save contact details immediately, and update the table. Batch research processes up to 10 farms at a time.</p>
+    </article>
+  </div>
+
+  <form class="filter-bar" method="get" action="/admin/outreach">
+    <select name="region">
+      {% for key, profile in regions.items() %}
+        <option value="{{ key }}" {% if selected_region == key %}selected{% endif %}>{{ profile.label }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="">Any outreach status</option>
+      {% for status in outreach_statuses %}
+        <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <select name="research_status">
+      <option value="">Any research status</option>
+      {% for status in research_statuses %}
+        <option value="{{ status }}" {% if filters.research_status == status %}selected{% endif %}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Producer</th>
+          <th>Location</th>
+          <th>Research</th>
+          <th>Contact</th>
+          <th>Update</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for candidate in candidates %}
+        <tr data-outreach-row="{{ candidate.id }}">
+          <td><strong>{{ candidate.priority_rank }}</strong><br><span>{{ candidate.priority_score }}</span></td>
+          <td>
+            <strong>{{ candidate.producer_name }}</strong><br>
+            <span>{{ candidate.producer_type or "" }}</span><br>
+            <small>{{ candidate.priority_reason or "" }}</small>
+          </td>
+          <td>{{ candidate.city or "" }}, {{ candidate.state or "" }} {{ candidate.zip_code or "" }}<br><small>{{ candidate.principal_office_address or "" }}</small></td>
+          <td>
+            <a href="{{ candidate.search_url }}" target="_blank" rel="noopener">Search web</a><br>
+            <small data-research-status>{{ candidate.research_status }}</small><br>
+            {% if candidate.research_status in ["found_contact", "verified"] %}
+              <button type="button" data-research-button data-candidate-id="{{ candidate.id }}" disabled>Researched</button>
+            {% elif candidate.research_status == "no_contact_found" %}
+              <button type="button" data-research-button data-candidate-id="{{ candidate.id }}">Research again</button>
+            {% else %}
+              <button type="button" data-research-button data-candidate-id="{{ candidate.id }}">Research now</button>
+            {% endif %}
+          </td>
+          <td data-contact-cell>
+            {% if candidate.website_url %}<a data-website-link href="{{ candidate.website_url }}" target="_blank" rel="noopener">Website</a><br>{% endif %}
+            {% if candidate.instagram_url %}<a data-instagram-link href="{{ candidate.instagram_url }}" target="_blank" rel="noopener">Instagram</a><br>{% endif %}
+            {% if candidate.facebook_url %}<a data-facebook-link href="{{ candidate.facebook_url }}" target="_blank" rel="noopener">Facebook</a><br>{% endif %}
+            <span data-contact-email>{{ candidate.contact_email or "" }}</span><br>
+            <span data-contact-phone>{{ candidate.contact_phone or "" }}</span>
+            {% if candidate.contact_email and candidate.research_status in ["found_contact", "verified"] %}
+              <br><a class="button" data-email-draft-link href="/admin/outreach/candidates/{{ candidate.id }}/email-suggestion" target="_blank" rel="noopener">Email draft</a>
+            {% endif %}
+          </td>
+          <td>
+            <form class="compact-form" method="post" action="/admin/outreach/candidates/{{ candidate.id }}" data-outreach-form>
+              <select name="outreach_status">
+                {% for status in outreach_statuses %}
+                  <option value="{{ status }}" {% if candidate.outreach_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+              </select>
+              <select name="research_status">
+                {% for status in research_statuses %}
+                  <option value="{{ status }}" {% if candidate.research_status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+              </select>
+              <input name="website_url" placeholder="Website" value="{{ candidate.website_url or '' }}">
+              <input name="contact_email" placeholder="Email" value="{{ candidate.contact_email or '' }}">
+              <input name="contact_phone" placeholder="Phone" value="{{ candidate.contact_phone or '' }}">
+              <input name="instagram_url" placeholder="Instagram" value="{{ candidate.instagram_url or '' }}">
+              <input name="facebook_url" placeholder="Facebook" value="{{ candidate.facebook_url or '' }}">
+              <input name="next_step" placeholder="Next step" value="{{ candidate.next_step or '' }}">
+              <textarea name="notes" placeholder="Notes">{{ candidate.notes or '' }}</textarea>
+              <button type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6">No outreach candidates yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
