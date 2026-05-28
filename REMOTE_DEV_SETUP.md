@@ -242,6 +242,12 @@ Run the current table initialization:
 docker compose -f docker-compose.yml -f docker-compose.production.yml exec web python -c "from app.database import init_db; init_db()"
 ```
 
+Run Alembic migrations:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.production.yml exec web alembic upgrade head
+```
+
 Seed demo data:
 
 ```bash

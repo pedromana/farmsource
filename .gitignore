@@ -28,6 +28,7 @@ data/imports/*
 .DS_Store
 
 logs/
+backups/
 
 node_modules/
 npm-debug.log*

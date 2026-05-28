@@ -779,6 +779,8 @@ docker compose config --quiet
 
 Additional operator docs:
 
+- `REMOTE_DEV_SETUP.md`: remote Linux development workflow for VS Code Remote SSH or PyCharm remote development
+- `PRODUCTION_OPERATIONS.md`: Alembic migration and Postgres backup/restore commands
 - `LAUNCH_CHECKLIST.md`: production, Stripe, operations, outreach, and pilot readiness checklist for `farmsourcemarket.com`
 - `NEXT_7_DAY_PLAN.md`: one-week solo founder plan for production readiness and first producer outreach
 - `V1_TESTING_CHECKLIST.md`: manual and automated checks for local pilot testing
