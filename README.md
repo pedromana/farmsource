@@ -779,6 +779,7 @@ docker compose config --quiet
 
 Additional operator docs:
 
+- `SESSION_HANDOFF.md`: current remote-dev handoff context for future Codex/IDE sessions
 - `REMOTE_DEV_SETUP.md`: remote Linux development workflow for VS Code Remote SSH or PyCharm remote development
 - `PRODUCTION_OPERATIONS.md`: Alembic migration and Postgres backup/restore commands
 - `LAUNCH_CHECKLIST.md`: production, Stripe, operations, outreach, and pilot readiness checklist for `farmsourcemarket.com`
